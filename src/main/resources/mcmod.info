@@ -1,0 +1,20 @@
+{
+	"modListVersion": 2,
+	"modList": [{
+		"modid": "${modId}",
+		"name": "${modName}",
+		"description": "Seasons for GTNewHorizons.",
+		"version": "${modVersion}",
+		"mcversion": "${minecraftVersion}",
+		"updateUrl": "",
+		"authorList": ["DarkShadow44"],
+		"credits": "",
+		"logoFile": "",
+		"screenshots": [],
+		"parent": "",
+		"requiredMods": [],
+		"dependencies": [],
+		"dependants": [],
+		"useDependencyInformation": false
+	}]
+}
