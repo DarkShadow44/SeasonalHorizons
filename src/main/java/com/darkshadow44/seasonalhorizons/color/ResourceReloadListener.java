@@ -16,7 +16,7 @@ public class ResourceReloadListener implements IResourceManagerReloadListener {
     public void onResourceManagerReload(IResourceManager resourceManager) {
 
         for (Season season : Season.values()) {
-            String mainPath = "textures/colormap/" + season.getMainSeason().getId() + "/" + season.getId();
+            String mainPath = "textures/colormap/" + season.getMainSeason().getId() + "/" + season.getSubSeason().getId();
             String pathFoliage = mainPath + "_foliage.png";
             String pathGrass = mainPath + "_grass.png";
             season.setFoliageColorMap(getRawPixelData(pathFoliage));
