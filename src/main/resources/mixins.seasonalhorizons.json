@@ -1,11 +1,12 @@
 {
-    "package": "com.darkshadow44.seasonalhorizons.mixin",
-    "refmap": "seasonalhorizons.refmap.json",
-    "target": "@env(DEFAULT)",
-    "minVersion": "0.7",
-    "compatibilityLevel": "JAVA_21",
-    "mixins": [
-    ],
-    "client": [
-    ]
+  "package": "com.darkshadow44.seasonalhorizons.mixin",
+  "refmap": "seasonalhorizons.refmap.json",
+  "target": "@env(DEFAULT)",
+  "minVersion": "0.7",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+  ],
+  "client": [
+    "MixinBiomeGenBase"
+  ]
 }

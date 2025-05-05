@@ -37,6 +37,9 @@ public class SeasonCommand extends CommandBase {
             }
 
             SeasonHandlerServer.setSeasonForWorld(sender.getEntityWorld(), season.get());
+        } else {
+            sender.addChatMessage(new ChatComponentText("Available subcommands:"));
+            sender.addChatMessage(new ChatComponentText(" set <season name>"));
         }
     }
 }
