@@ -5,6 +5,8 @@
   "minVersion": "0.7",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "MixinBlockIce",
+    "MixinBlockSnow"
   ],
   "client": [
     "MixinBiomeGenBase"
