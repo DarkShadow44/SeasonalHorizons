@@ -11,7 +11,7 @@ public enum Season {
     SUMMER_EARLY(MainSeason.SUMMER, SubSeason.EARLY, 0.3f, -0.2f),
     SUMMER_MID(MainSeason.SUMMER, SubSeason.MID, 0.8f, -0.5f),
     SUMMER_LATE(MainSeason.SUMMER, SubSeason.LATE, 0.4f, -0.2f),
-    AUTUMN_EARLY(MainSeason.AUTUMN, SubSeason.EARLY, 0.1f, 0.1f),
+    AUTUMN_EARLY(MainSeason.AUTUMN, SubSeason.EARLY, -0.1f, 0.1f),
     AUTUMN_MID(MainSeason.AUTUMN, SubSeason.MID, -0.2f, 0.2f),
     AUTUMN_LATE(MainSeason.AUTUMN, SubSeason.LATE, -0.4f, 0.1f),
     WINTER_EARLY(MainSeason.WINTER, SubSeason.EARLY, -0.7f, 0),
