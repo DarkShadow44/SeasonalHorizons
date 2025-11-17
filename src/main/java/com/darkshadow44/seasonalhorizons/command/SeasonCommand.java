@@ -1,14 +1,16 @@
 package com.darkshadow44.seasonalhorizons.command;
 
-import com.darkshadow44.seasonalhorizons.season.Season;
-import com.darkshadow44.seasonalhorizons.season.SeasonHandlerServer;
+import java.util.Optional;
+
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.util.ChatComponentText;
 
-import java.util.Optional;
+import com.darkshadow44.seasonalhorizons.season.Season;
+import com.darkshadow44.seasonalhorizons.season.SeasonHandlerServer;
 
 public class SeasonCommand extends CommandBase {
+
     @Override
     public String getCommandName() {
         return "season";

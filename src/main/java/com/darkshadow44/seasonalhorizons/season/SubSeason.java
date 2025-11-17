@@ -1,6 +1,7 @@
 package com.darkshadow44.seasonalhorizons.season;
 
 public enum SubSeason {
+
     EARLY("early"),
     MID("mid"),
     LATE("late");

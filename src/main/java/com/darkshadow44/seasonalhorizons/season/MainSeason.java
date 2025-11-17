@@ -1,6 +1,7 @@
 package com.darkshadow44.seasonalhorizons.season;
 
 public enum MainSeason {
+
     SPRING("spring"),
     SUMMER("summer"),
     AUTUMN("autumn"),

@@ -3,6 +3,7 @@ package com.darkshadow44.seasonalhorizons.color;
 import net.minecraft.util.MathHelper;
 
 public class SeasonColorMap {
+
     private final int[] colorMap;
 
     public SeasonColorMap(int[] pixels) {

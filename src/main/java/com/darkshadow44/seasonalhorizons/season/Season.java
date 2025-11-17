@@ -1,10 +1,12 @@
 package com.darkshadow44.seasonalhorizons.season;
 
-import com.darkshadow44.seasonalhorizons.color.SeasonColorMap;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.darkshadow44.seasonalhorizons.color.SeasonColorMap;
+
 public enum Season {
+
     SPRING_EARLY(MainSeason.SPRING, SubSeason.EARLY, false),
     SPRING_MID(MainSeason.SPRING, SubSeason.MID, false),
     SPRING_LATE(MainSeason.SPRING, SubSeason.LATE, false),
