@@ -15,7 +15,6 @@ public class ResourceReloadListener implements IResourceManagerReloadListener {
 
     @Override
     public void onResourceManagerReload(IResourceManager resourceManager) {
-
         for (Season season : Season.values()) {
             String mainPath = "textures/colormap/" + season.getMainSeason()
                 .getId()

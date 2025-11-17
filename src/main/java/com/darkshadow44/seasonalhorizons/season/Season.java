@@ -72,4 +72,8 @@ public enum Season {
         float rainfall = getAdjustedRainfall(biome.rainfall);
         return colorMapGrass.getColor(temperature, rainfall);
     }
+
+    public boolean isWinter() {
+        return isWinter;
+    }
 }

@@ -6,5 +6,8 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "MixinBiomeGenBase"
+  ],
+  "mixins": [
+    "MixinWorldServer"
   ]
 }
