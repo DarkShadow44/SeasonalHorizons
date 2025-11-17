@@ -25,12 +25,12 @@ public class SnowHandler {
         }
     }
 
-    private static long mix(long x) {
-        x ^= x >>> 33;
-        x *= 0xff51afd7ed558ccdL;
-        x ^= x >>> 33;
-        x *= 0xc4ceb9fe1a85ec53L;
-        x ^= x >>> 33;
+    private static int mix(int x) {
+        x ^= x >>> 16;
+        x *= 0x85ebca6b;
+        x ^= x >>> 13;
+        x *= 0xc2b2ae35;
+        x ^= x >>> 16;
         return x;
     }
 
@@ -38,11 +38,11 @@ public class SnowHandler {
      * Get the block schedule. Length of the array is the maximum time (in ticks) where a chunk should be completely
      * processed. schedule[i] is the coordinate of the block (x * 16 + z) to process at tick i, or -1 for none.
      */
-    public static void getBlockSchedule(int[] schedule, long seed, int chunkX, int chunkZ) {
+    public static void getBlockSchedule(int[] schedule, int seed, int chunkX, int chunkZ) {
         final int length = schedule.length;
         Arrays.fill(schedule, -1);
 
-        long seedBase = mix(seed ^ mix(chunkX) ^ mix(chunkZ));
+        int seedBase = mix(seed ^ mix(chunkX) ^ mix(chunkZ));
 
         for (int i = 0; i < 256; i++) {
             long hash = mix(seedBase ^ mix(i));
@@ -142,7 +142,7 @@ public class SnowHandler {
         if (currentSeason != lastSeason) {
             if (lastSeason == null || currentSeason.isWinter() != lastSeason.isWinter()) {
                 thawTicks = 0;
-                snowEvents.clear(); // TODO only clear snow events once thawTicks reached max, same for thaw.
+                snowEvents.clear(); // TODO only clear snow events once thawTicks reached max, same for thaw. e.g. new chunk in early spring still needs snow from last winter...
             }
             lastSeason = currentSeason;
         }
