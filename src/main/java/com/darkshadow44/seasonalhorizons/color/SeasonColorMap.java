@@ -3,11 +3,7 @@ package com.darkshadow44.seasonalhorizons.color;
 import net.minecraft.util.MathHelper;
 
 public class SeasonColorMap {
-
-    /*
-    Logic adapted from https://github.com/lucaargolo/fabric-seasons/blob/9e721b2e501741ad337c1e9d102d046e6809174c/src/main/java/io/github/lucaargolo/seasons/colors/SeasonFoliageColors.java
-    */
-    private int[] colorMap;
+    private final int[] colorMap;
 
     public SeasonColorMap(int[] pixels) {
         this.colorMap = pixels;

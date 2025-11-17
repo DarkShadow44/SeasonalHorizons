@@ -5,32 +5,29 @@ import net.minecraft.util.MathHelper;
 import net.minecraft.world.biome.BiomeGenBase;
 
 public enum Season {
-    SPRING_EARLY(MainSeason.SPRING, SubSeason.EARLY, -0.4f, 0.1f),
-    SPRING_MID(MainSeason.SPRING, SubSeason.MID, -0.2f, 0.3f),
-    SPRING_LATE(MainSeason.SPRING, SubSeason.LATE, -0.1f, 0.2f),
-    SUMMER_EARLY(MainSeason.SUMMER, SubSeason.EARLY, 0.1f, -0.2f),
-    SUMMER_MID(MainSeason.SUMMER, SubSeason.MID, 0.3f, -0.5f),
-    SUMMER_LATE(MainSeason.SUMMER, SubSeason.LATE, 0.1f, -0.2f),
-    AUTUMN_EARLY(MainSeason.AUTUMN, SubSeason.EARLY, -0.1f, 0.1f),
-    AUTUMN_MID(MainSeason.AUTUMN, SubSeason.MID, -0.2f, 0.2f),
-    AUTUMN_LATE(MainSeason.AUTUMN, SubSeason.LATE, -0.4f, 0.1f),
-    WINTER_EARLY(MainSeason.WINTER, SubSeason.EARLY, -0.7f, 0),
-    WINTER_MID(MainSeason.WINTER, SubSeason.MID, -0.8f, 0.2f),
-    WINTER_LATE(MainSeason.WINTER, SubSeason.LATE, -0.7f, 0);
+    SPRING_EARLY(MainSeason.SPRING, SubSeason.EARLY, false),
+    SPRING_MID(MainSeason.SPRING, SubSeason.MID, false),
+    SPRING_LATE(MainSeason.SPRING, SubSeason.LATE, false),
+    SUMMER_EARLY(MainSeason.SUMMER, SubSeason.EARLY, false),
+    SUMMER_MID(MainSeason.SUMMER, SubSeason.MID, false),
+    SUMMER_LATE(MainSeason.SUMMER, SubSeason.LATE, false),
+    AUTUMN_EARLY(MainSeason.AUTUMN, SubSeason.EARLY, false),
+    AUTUMN_MID(MainSeason.AUTUMN, SubSeason.MID, false),
+    AUTUMN_LATE(MainSeason.AUTUMN, SubSeason.LATE, false),
+    WINTER_EARLY(MainSeason.WINTER, SubSeason.EARLY, true),
+    WINTER_MID(MainSeason.WINTER, SubSeason.MID, true),
+    WINTER_LATE(MainSeason.WINTER, SubSeason.LATE, true);
 
     private final MainSeason mainSeason;
     private final SubSeason subSeason;
-    private final float temperatureChange;
-    private final float rainChange;
-
+    private final boolean isWinter;
     private SeasonColorMap colorMapFoliage;
     private SeasonColorMap colorMapGrass;
 
-    Season(MainSeason mainSeason, SubSeason subSeason, float temperatureChange, float rainChange) {
+    Season(MainSeason mainSeason, SubSeason subSeason, boolean isWinter) {
         this.mainSeason = mainSeason;
         this.subSeason = subSeason;
-        this.temperatureChange = temperatureChange;
-        this.rainChange = rainChange;
+        this.isWinter = isWinter;
     }
 
     public String getId() {
@@ -46,11 +43,12 @@ public enum Season {
     }
 
     public float getAdjustedTemperature(float temperature) {
+        float temperatureChange = isWinter ? -0.7f : 0;
         return MathHelper.clamp_float(temperature + temperatureChange, -0.5f, 2.0f);
     }
 
     public float getAdjustedRainfall(float rainfall) {
-        return MathHelper.clamp_float(rainfall + rainChange, -0.5f, 2.0f);
+        return rainfall;
     }
 
     public void setFoliageColorMap(int[] rawPixelData) {

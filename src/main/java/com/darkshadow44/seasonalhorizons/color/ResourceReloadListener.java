@@ -23,8 +23,7 @@ public class ResourceReloadListener implements IResourceManagerReloadListener {
             season.setGrassColorMap(getRawPixelData(pathGrass));
         }
     }
-
-
+    
     public static int[] getRawPixelData(String path) {
         try {
             ResourceLocation location = new ResourceLocation(SeasonalHorizons.MODID, path);
