@@ -1,0 +1,33 @@
+smooth transition grass/leaves. keep texture in memory and slowly transition?
+(snow as overlay to slowly transition in?)
+force snow overlay by turning top texture into snow.
+
+
+Season Snow Logic:
+- Only care for global weather, local weather comes later.
+- We only care for Winter / No Winter. Temperature changes -0.7 in winter.
+- Each unloaded chunk saves the global world time it got last modified
+- Each chunk gets a number from 1 - X ticks, defining the time from start of snow till this block gets snowed on. This pattern is repeated forever to set / remove snow.
+- When it snows, update all loaded chunks once per second. All chunks that would get snow in this timeframe, get changed to snow.
+- Global list for snowEvents, contains start global world time and end time. When starting snowing, put event in. When stops snowing (or season changes), set end. List is cleared when winter ends.
+- Global int for thawingStart, set once season changes to not-winter
+- On loading chunk, check last modified time against snow/thaw list. Count snow/thaw ticks. if bigger than max, snow/thaw all. Otherwise apply pattern. starting from (last time / max pattern) the next (current time - last time) ticks, wrapping around.
+  e.g. last time = 55, max pattern = 50, new time = 100
+
+DH Logic:
+- Keep [max lod distance * max lod distance] array clientside
+- Sync snowEvents/thawingStart to client on connect or dimension change, client keeps updating it
+- LOD chunk needs last modified time as well
+- if season changes or dimension changes, put all in unknown list.
+- if at least one block in chunk can thaw, put in thaw list.
+- if at least one block in chunk can snow, put in snow list.
+- if snow ends put all from snow list into snowpostprocess list, where they are removed once processed. only removed from snow once fully snowed
+- on season change clear thaw/snow list
+- remove from lists if fully processed
+- Have list to check if block should be
+- Update lists on movement, queue new blocks, remove old ones
+- Mark ~200 DH chunks second for render update. They check if there should be snow, and add/remove it accordingly.
+
+SimpleClouds:
+- Frost accumulates randomly, just slower than when it snows
+- special effect to show "frost weather" is in effect
