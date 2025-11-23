@@ -7,7 +7,7 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.util.ChatComponentText;
 
 import com.darkshadow44.seasonalhorizons.season.Season;
-import com.darkshadow44.seasonalhorizons.season.SeasonHandlerServer;
+import com.darkshadow44.seasonalhorizons.season.SeasonHandler;
 
 public class SeasonCommand extends CommandBase {
 
@@ -29,16 +29,16 @@ public class SeasonCommand extends CommandBase {
         } else if (args[0].equals("set")) {
             Optional<Season> season = Optional.empty();
             if (args.length > 1) {
-                season = SeasonHandlerServer.getSeasonById(args[1]);
+                season = SeasonHandler.getSeasonById(args[1]);
             }
 
             if (!season.isPresent()) {
                 sender.addChatMessage(new ChatComponentText("Available seasons:"));
-                sender.addChatMessage(new ChatComponentText(String.join(" ", SeasonHandlerServer.getSeasonIds())));
+                sender.addChatMessage(new ChatComponentText(String.join(" ", SeasonHandler.getSeasonIds())));
                 return;
             }
 
-            SeasonHandlerServer.setSeasonForWorld(sender.getEntityWorld(), season.get());
+            SeasonHandler.setSeasonForWorld(sender.getEntityWorld(), season.get());
         } else {
             sender.addChatMessage(new ChatComponentText("Available subcommands:"));
             sender.addChatMessage(new ChatComponentText(" set <season name>"));

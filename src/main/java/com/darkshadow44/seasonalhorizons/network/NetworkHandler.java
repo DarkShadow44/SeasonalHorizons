@@ -4,7 +4,7 @@ import net.minecraft.world.World;
 
 import com.darkshadow44.seasonalhorizons.SeasonalHorizons;
 import com.darkshadow44.seasonalhorizons.season.Season;
-import com.darkshadow44.seasonalhorizons.season.SeasonHandlerServer;
+import com.darkshadow44.seasonalhorizons.season.SeasonHandler;
 
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
@@ -20,7 +20,7 @@ public class NetworkHandler {
     }
 
     public static void sendSeasonUpdate(World world) {
-        Season season = SeasonHandlerServer.getSeasonForWorld(world);
+        Season season = SeasonHandler.getSeasonForWorld(world);
         channel.sendToAll(new MessageSeasonChange(world, season));
     }
 }

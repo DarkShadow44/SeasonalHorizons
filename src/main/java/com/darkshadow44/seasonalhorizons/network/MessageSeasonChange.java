@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.World;
 
 import com.darkshadow44.seasonalhorizons.season.Season;
-import com.darkshadow44.seasonalhorizons.season.SeasonHandlerClient;
+import com.darkshadow44.seasonalhorizons.season.SeasonHandler;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -41,7 +41,7 @@ public class MessageSeasonChange implements IMessage, IMessageHandler<MessageSea
         if (ctx.side == Side.CLIENT) {
             if (Minecraft.getMinecraft().thePlayer.dimension == dimension) {
                 Season season = Season.values()[message.season];
-                SeasonHandlerClient.updateSeason(season);
+                SeasonHandler.updateClientSeason(season);
             }
         }
 

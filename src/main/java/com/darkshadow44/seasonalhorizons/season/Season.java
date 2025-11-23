@@ -76,4 +76,12 @@ public enum Season {
     public boolean isWinter() {
         return isWinter;
     }
+
+    public Season nextSeason() {
+        int seasonId = ordinal() + 1;
+        if (seasonId > Season.WINTER_LATE.ordinal()) {
+            seasonId = 0;
+        }
+        return Season.values()[seasonId];
+    }
 }

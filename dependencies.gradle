@@ -35,4 +35,6 @@
  */
 dependencies {
     runtimeOnlyNonPublishable("com.github.GTNewHorizons:NotEnoughItems:2.7.4-GTNH:dev")
+    api("com.github.GTNewHorizons:GTNHLib:0.8.13:dev")
+    api("com.falsepattern:chunkapi-mc1.7.10:0.7.0")
 }

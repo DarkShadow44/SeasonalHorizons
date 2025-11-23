@@ -1,28 +1,37 @@
 package com.darkshadow44.seasonalhorizons.season;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.WeakHashMap;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
-import net.minecraft.world.WorldServer;
+import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 
+import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
+
 public class SnowHandler {
 
+    private static final int MAX_SEASON_LENGTH = 10000;
     private static final int MAX_TICKS_FOR_CHUNK_UPDATE = 20000;
+    private static final int MAX_EVENT_CACHE = 10;
 
-    private static class SnowEvent {
+    // To speed up every tick processing
+    private final WeakHashMap<Chunk, int[]> chunkSchedules = new WeakHashMap<>();
 
-        public long start;
-        public long end;
+    // To avoid reallocations
+    private final int[] tempSchedule = new int[MAX_TICKS_FOR_CHUNK_UPDATE];
 
-        public SnowEvent(long start) {
-            this.start = start;
-        }
+    private final World world;
+
+    // Saved season data
+    SeasonWorldData seasonWorldData;
+
+    public SnowHandler(World world, SeasonWorldData seasonWorldData) {
+        this.world = world;
+        this.seasonWorldData = seasonWorldData;
     }
 
     private static int mix(int x) {
@@ -58,63 +67,123 @@ public class SnowHandler {
         }
     }
 
-    private static void processBlock(Chunk chunk, int x, int z) {
-        int blockX = (chunk.xPosition << 4) + x;
-        int blockZ = (chunk.zPosition << 4) + z;
-
-        if (chunk.xPosition == 0 && chunk.zPosition == 0) {
-            int k = 0;
-        }
-
-        BiomeGenBase biome = chunk.worldObj.getBiomeGenForCoords(blockX, blockZ);
-        int y = chunk.getHeightValue(x, z);
-        float temperature = lastSeason.getAdjustedTemperature(biome.temperature);
-
-        if (temperature >= 0.15) {
-            Block block = chunk.getBlock(x, y, z);
-            if (block == Blocks.snow_layer) {
-                chunk.worldObj.setBlock(blockX, y, blockZ, Blocks.air);
+    private void processBlock(int x, int z, boolean snow) {
+        int y = world.getHeightValue(x, z);
+        if (snow) {
+            if (world.func_147478_e(x, y, z, true)) {
+                world.setBlock(x, y, z, Blocks.snow_layer);
             }
-            /*
-             * if (block == Blocks.ice) {
-             * chunk.func_150807_a(x, y, z, Blocks.water, 0);
-             * }
-             */
         } else {
-            if (chunk.worldObj.func_147478_e(blockX, y, blockZ, true)) {
-                chunk.worldObj.setBlock(blockX, y, blockZ, Blocks.snow_layer);
+            Block block = world.getBlock(x, y, z);
+            if (block == Blocks.snow_layer) {
+                world.setBlock(x, y, z, Blocks.air);
             }
         }
     }
 
-    private static void processUpdatesForChunk(Chunk chunk, long lastUpdateTime) {
-        long difference = chunk.worldObj.getTotalWorldTime() - lastUpdateTime;
-        if (difference > MAX_TICKS_FOR_CHUNK_UPDATE) {
-            for (int i = 0; i < 256; i++) {
-                processBlock(chunk, i >> 4, i & 0xf);
+    private void calculateChunkLastTicks(List<SeasonEvent> events, long[] lastChangeTick, boolean[] hasChange,
+        boolean handlingSnow, Chunk chunk, long lastUpdateTime) {
+        int lastFullEventIndex = 0;
+        for (int i = events.size() - 1; i >= 0; i--) {
+            SeasonEvent event = events.get(i);
+            if (event.start >= lastUpdateTime && (event.end - event.start >= MAX_TICKS_FOR_CHUNK_UPDATE)) {
+                lastFullEventIndex = i + 1;
+                Arrays.fill(lastChangeTick, event.start);
+                Arrays.fill(hasChange, true);
+                break;
             }
-            return;
         }
 
-        int[] schedule = new int[MAX_TICKS_FOR_CHUNK_UPDATE];
+        for (int i = lastFullEventIndex; i < events.size(); i++) {
+            SeasonEvent event = events.get(i);
 
-        getBlockSchedule(schedule, 0, chunk.xPosition, chunk.zPosition);
+            long end = event.end != 0 ? event.end : world.getTotalWorldTime();
 
-        // Process next ticks
-        int pos = (int) (chunk.worldObj.getTotalWorldTime() % MAX_TICKS_FOR_CHUNK_UPDATE);
-        for (int i = 0; i < difference; i++) {
-            if (pos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
-                pos = 0;
+            // Skip events that are not ongoing and have fully happened before chunk was unloaded
+            if (end < lastUpdateTime) {
+                continue;
             }
-            int blockPos = schedule[pos];
-            if (blockPos != -1) {
-                processBlock(chunk, blockPos >> 4, blockPos & 0xf);
+
+            long start = Math.max(lastUpdateTime, event.start);
+            int count = (int) (end - start);
+
+            getBlockSchedule(tempSchedule, chunk.xPosition, chunk.zPosition, event.seed);
+
+            int pos = (int) (start % MAX_TICKS_FOR_CHUNK_UPDATE);
+
+            if (event.isWinter == handlingSnow) {
+                // Dealing with an event relevant for normal biomes
+                // Otherwise we have perma snow/thaw
+                for (int k = 0; k < count; k++) {
+                    if (pos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
+                        pos = 0;
+                    }
+                    int blockPos = tempSchedule[pos];
+                    if (blockPos != -1) {
+                        lastChangeTick[blockPos] = start + k;
+                        hasChange[blockPos] = true;
+                    }
+                    pos++;
+                }
+            } else if (handlingSnow) {
+                // Snow in summer (perma snow biomes)
+                // We ignore thaw in winter in perma thaw biomes. Can't place snow anyways.
+                for (int k = 0; k < count; k++) {
+                    if (pos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
+                        pos = 0;
+                    }
+                    int blockPos = tempSchedule[pos];
+                    if (blockPos != -1) {
+                        hasChange[blockPos] = true;
+                    }
+                    pos++;
+                }
             }
-            pos++;
         }
     }
 
-    public static void handleSnowServer(Chunk chunk) {
+    public void processChunk(Chunk chunk, long lastUpdateTime) {
+        long[] lastSnowTick = new long[256];
+        long[] lastThawTick = new long[256];
+        boolean[] snowChanges = new boolean[256];
+
+        calculateChunkLastTicks(seasonWorldData.snowEvents, lastSnowTick, snowChanges, true, chunk, lastUpdateTime);
+        calculateChunkLastTicks(seasonWorldData.thawEvents, lastThawTick, null, false, chunk, lastUpdateTime);
+
+        for (int i = 0; i < 16; i++) {
+            for (int j = 0; j < 16; j++) {
+                int index = (i << 4) + j;
+                int x = (chunk.xPosition << 4) + i;
+                int z = (chunk.zPosition << 4) + j;
+                BiomeGenBase biome = world.getBiomeGenForCoords(x, z);
+                boolean isPermaSnow = biome.temperature <= 0.15;
+                boolean isPermaThaw = biome.temperature - 0.7 >= 0.15;
+
+                if (isPermaThaw) {
+                    continue;
+                }
+
+                if (isPermaSnow) {
+                    if (snowChanges[index]) {
+                        processBlock(x, z, true);
+                    }
+                    continue;
+                }
+
+                if (lastSnowTick[index] == 0 && lastThawTick[index] == 0) {
+                    continue;
+                }
+
+                if (lastSnowTick[index] != 0 && lastThawTick[index] != 0) {
+                    processBlock(x, z, lastSnowTick[index] > lastThawTick[index]);
+                } else {
+                    processBlock(x, z, lastSnowTick[index] != 0);
+                }
+            }
+        }
+    }
+
+    public void handleSnowServerTick(Chunk chunk) {
         int[] schedule = chunkSchedules.computeIfAbsent(chunk, dummy -> {
             int[] ret = new int[MAX_TICKS_FOR_CHUNK_UPDATE];
             getBlockSchedule(ret, 0, chunk.xPosition, chunk.zPosition);
@@ -124,45 +193,57 @@ public class SnowHandler {
         int pos = (int) (chunk.worldObj.getTotalWorldTime() % MAX_TICKS_FOR_CHUNK_UPDATE);
         int blockPos = schedule[pos];
         if (blockPos != -1) {
-            processBlock(chunk, blockPos >> 4, blockPos & 0xf);
+            int x = (chunk.xPosition << 4) + (blockPos >> 4);
+            int z = (chunk.zPosition << 4) + (blockPos & 0xf);
+            BiomeGenBase biome = chunk.worldObj.getBiomeGenForCoords(x, z);
+            float temperature = seasonWorldData.season.getAdjustedTemperature(biome.temperature);
+            boolean snow = temperature < 0.15;
+            if (!snow || seasonWorldData.currentIsRaining) {
+                processBlock(x, z, snow);
+            }
         }
     }
 
-    private static final WeakHashMap<Chunk, int[]> chunkSchedules = new WeakHashMap<>();
+    public void handleSnowServerGlobal() {
+        boolean isRaining = world.isRaining();
 
-    // TODO save!
-    private static Season lastSeason;
-    private static boolean lastIsRaining;
-    // Thaw ticks to process.
-    private static int thawTicks;
-    private static final List<SnowEvent> snowEvents = new ArrayList<>();
-
-    public static void handleSnowServerGlobal(WorldServer world) {
-        Season currentSeason = SeasonHandlerServer.getSeasonForWorld(world);
-        if (currentSeason != lastSeason) {
-            if (lastSeason == null || currentSeason.isWinter() != lastSeason.isWinter()) {
-                thawTicks = 0;
-                snowEvents.clear(); // TODO only clear snow events once thawTicks reached max, same for thaw. e.g. new chunk in early spring still needs snow from last winter...
+        if (seasonWorldData.lastSeason != seasonWorldData.season) {
+            if (seasonWorldData.lastSeason == null
+                || seasonWorldData.season.isWinter() != seasonWorldData.lastSeason.isWinter()) {
+                List<SeasonEvent> thawEvents = seasonWorldData.thawEvents;
+                if (!thawEvents.isEmpty()) {
+                    thawEvents.get(thawEvents.size() - 1).end = world.getTotalWorldTime();
+                }
+                thawEvents.add(new SeasonEvent(world, seasonWorldData.season.isWinter()));
+                if (thawEvents.size() > MAX_EVENT_CACHE) {
+                    thawEvents.remove(0);
+                }
+                if (isRaining) {
+                    // Force new snow event, since it might have changed from snow to rain or vice versa
+                    seasonWorldData.currentIsRaining = false;
+                }
             }
-            lastSeason = currentSeason;
-        }
-
-        // Process thawing
-        if (thawTicks < MAX_TICKS_FOR_CHUNK_UPDATE) {
-            thawTicks++;
-        } else {
-            thawTicks = 0;
+            seasonWorldData.lastSeason = seasonWorldData.season;
         }
 
         // Process snowing
-        boolean isRaining = world.isRaining();
-        if (lastIsRaining != isRaining) {
+        if (seasonWorldData.currentIsRaining != isRaining) {
+            List<SeasonEvent> snowEvents = seasonWorldData.snowEvents;
             if (isRaining) {
-                snowEvents.add(new SnowEvent(world.getTotalWorldTime()));
+                snowEvents.add(new SeasonEvent(world, seasonWorldData.season.isWinter()));
+                if (snowEvents.size() > MAX_EVENT_CACHE) {
+                    snowEvents.remove(0);
+                }
             } else if (!snowEvents.isEmpty()) {
                 snowEvents.get(snowEvents.size() - 1).end = world.getTotalWorldTime();
             }
-            lastIsRaining = isRaining;
+            seasonWorldData.currentIsRaining = isRaining;
+        }
+
+        seasonWorldData.seasonTicks++;
+        if (seasonWorldData.seasonTicks >= MAX_SEASON_LENGTH) {
+            seasonWorldData.seasonTicks = 0;
+            seasonWorldData.season = seasonWorldData.season.nextSeason();
         }
     }
 }

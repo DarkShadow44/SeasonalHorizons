@@ -13,8 +13,8 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 public class ClientProxy extends CommonProxy {
 
     @Override
-    public void initialize(FMLPreInitializationEvent event) {
-        super.initialize(event);
+    public void preInit(FMLPreInitializationEvent event) {
+        super.preInit(event);
         IReloadableResourceManager resourceManager = (IReloadableResourceManager) Minecraft.getMinecraft()
             .getResourceManager();
         resourceManager.registerReloadListener(new ResourceReloadListener());

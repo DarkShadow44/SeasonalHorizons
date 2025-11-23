@@ -7,12 +7,15 @@ Season Snow Logic:
 - Only care for global weather, local weather comes later.
 - We only care for Winter / No Winter. Temperature changes -0.7 in winter.
 - Each unloaded chunk saves the global world time it got last modified
-- Each chunk gets a number from 1 - X ticks, defining the time from start of snow till this block gets snowed on. This pattern is repeated forever to set / remove snow.
-- When it snows, update all loaded chunks once per second. All chunks that would get snow in this timeframe, get changed to snow.
-- Global list for snowEvents, contains start global world time and end time. When starting snowing, put event in. When stops snowing (or season changes), set end. List is cleared when winter ends.
-- Global int for thawingStart, set once season changes to not-winter
-- On loading chunk, check last modified time against snow/thaw list. Count snow/thaw ticks. if bigger than max, snow/thaw all. Otherwise apply pattern. starting from (last time / max pattern) the next (current time - last time) ticks, wrapping around.
-  e.g. last time = 55, max pattern = 50, new time = 100
+- Snow/Thaw is done by a pseudo random pattern. Each chunk gets a number from 1 - X ticks, defining the time from start of snow till this block gets snowed on / thawed. This pattern is repeated forever to set / remove snow.
+- Patterns for loaded chunks are saved and updated every tick. Snows / Thaws as needed
+- Global list for snowEvents, contains start global world time and end time. When starting snowing, put event in. When stops snowing (or season changes), set end. Max 10.
+- Global list for thawEvent, contains start global world time and end time. When season changes, put event in.
+- On loading chunk, check last modified time against snow/thaw list:
+    - First get last snow / thaw tick, and if there was a snow event (even in summer)
+    - For that, go through the list and find the latest full list. if found, we can start here and set all timestamsp to that
+    - Then go through the events one by one and check if there was a later event, update timestamp accordingly
+    - Lastly, also process snow events in summe - but put into separate array (For perma snow)
 
 DH Logic:
 - Keep [max lod distance * max lod distance] array clientside
