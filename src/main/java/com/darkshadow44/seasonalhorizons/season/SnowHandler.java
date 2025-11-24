@@ -72,7 +72,7 @@ public class SnowHandler {
         int y = world.getHeightValue(x, z);
         if (snow) {
             if (world.func_147478_e(x, y, z, true)) {
-                world.setBlock(x, y, z, Blocks.snow_layer);
+                world.setBlock(x, y, z, Blocks.snow_layer, 0, 2);
             }
         } else {
             Block block = world.getBlock(x, y, z);
