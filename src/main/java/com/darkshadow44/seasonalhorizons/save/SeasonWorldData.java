@@ -1,15 +1,9 @@
 package com.darkshadow44.seasonalhorizons.save;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.WorldSavedData;
-import net.minecraftforge.common.util.Constants;
 
 import com.darkshadow44.seasonalhorizons.season.Season;
-import com.darkshadow44.seasonalhorizons.season.SeasonEvent;
 
 public class SeasonWorldData extends WorldSavedData {
 
@@ -17,55 +11,56 @@ public class SeasonWorldData extends WorldSavedData {
 
     public int seasonTicks;
 
-    // To detect changes
-    public Season lastSeason;
-    public boolean currentIsRaining;
+    // Winter increments, summer decrements
+    public int schedulePos;
 
-    // List of all times it snowed in winter (at most MAX_EVENT_CACHE entries)
-    public List<SeasonEvent> snowEvents = new ArrayList<>();
-
-    // List of all times it thawed (at most MAX_EVENT_CACHE entries)
-    public List<SeasonEvent> thawEvents = new ArrayList<>();
+    public final long[] lastSnowTicksWinter = new long[256 * 256];
+    public final long[] lastThawTicksSummer = new long[256 * 256];
+    public final long[] lastSnowTicksAny = new long[256 * 256];
+    public final long[] lastThawTicksAny = new long[256 * 256];
 
     public SeasonWorldData(String name) {
         super(name);
     }
 
-    private List<SeasonEvent> readSeasonEventList(NBTTagList tagList) {
-        List<SeasonEvent> ret = new ArrayList<>();
-        for (int i = 0; i < tagList.tagCount(); i++) {
-            ret.add(SeasonEvent.readFromNBT(tagList.getCompoundTagAt(i)));
+    private void readSeasonEventList(long[] list, NBTTagCompound tag, String key) {
+        int[] hi = tag.getIntArray(key + "_hi");
+        int[] lo = tag.getIntArray(key + "_lo");
+        for (int i = 0; i < list.length; i++) {
+            list[i] = ((long) hi[i] << 32) | lo[i];
         }
-        return ret;
     }
 
-    private NBTTagList writeSeasonEventList(List<SeasonEvent> events) {
-        NBTTagList ret = new NBTTagList();
-        for (SeasonEvent event : events) {
-            NBTTagCompound tag = new NBTTagCompound();
-            event.writeToNBT(tag);
-            ret.appendTag(tag);
+    private void writeSeasonEventList(long[] list, NBTTagCompound tag, String key) {
+        int[] hi = new int[list.length];
+        int[] lo = new int[list.length];
+        for (int i = 0; i < list.length; i++) {
+            hi[i] = (int) (list[i] >> 32);
+            lo[i] = (int) (list[i] & 0xFFFFFFFFL);
         }
-        return ret;
+        tag.setIntArray(key + "_hi", hi);
+        tag.setIntArray(key + "_lo", lo);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         season = Season.values()[tag.getByte("season")];
         seasonTicks = tag.getInteger("seasonTicks");
-        lastSeason = Season.values()[tag.getByte("lastSeason")];
-        currentIsRaining = tag.getBoolean("currentIsRaining");
-        snowEvents = readSeasonEventList(tag.getTagList("snowEvents", Constants.NBT.TAG_COMPOUND));
-        thawEvents = readSeasonEventList(tag.getTagList("thawEvents", Constants.NBT.TAG_COMPOUND));
+        schedulePos = tag.getInteger("schedulePos");
+        readSeasonEventList(lastSnowTicksWinter, tag, "lastSnowTicksWinter");
+        readSeasonEventList(lastSnowTicksAny, tag, "lastSnowTicksAny");
+        readSeasonEventList(lastThawTicksSummer, tag, "lastThawTicksSummer");
+        readSeasonEventList(lastThawTicksAny, tag, "lastThawTicksAny");
     }
 
     @Override
     public void writeToNBT(NBTTagCompound tag) {
         tag.setByte("season", (byte) season.ordinal());
         tag.setInteger("seasonTicks", seasonTicks);
-        tag.setByte("lastSeason", (byte) lastSeason.ordinal());
-        tag.setBoolean("currentIsRaining", currentIsRaining);
-        tag.setTag("snowEvents", writeSeasonEventList(snowEvents));
-        tag.setTag("thawEvents", writeSeasonEventList(thawEvents));
+        tag.setInteger("schedulePos", schedulePos);
+        writeSeasonEventList(lastSnowTicksWinter, tag, "lastSnowTicksWinter");
+        writeSeasonEventList(lastSnowTicksAny, tag, "lastSnowTicksAny");
+        writeSeasonEventList(lastThawTicksSummer, tag, "lastThawTicksSummer");
+        writeSeasonEventList(lastThawTicksAny, tag, "lastThawTicksAny");
     }
 }
