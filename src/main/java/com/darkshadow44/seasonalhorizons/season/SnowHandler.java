@@ -305,11 +305,9 @@ public class SnowHandler {
                 if (!thawEvents.isEmpty()) {
                     thawEvents.get(thawEvents.size() - 1).end = world.getTotalWorldTime();
                 }
-                if (!seasonWorldData.season.isWinter()) {
-                    thawEvents.add(new SeasonEvent(world, false));
-                    if (thawEvents.size() > MAX_EVENT_CACHE) {
-                        thawEvents.remove(0);
-                    }
+                thawEvents.add(new SeasonEvent(world, seasonWorldData.season.isWinter()));
+                if (thawEvents.size() > MAX_EVENT_CACHE) {
+                    thawEvents.remove(0);
                 }
                 if (isRaining) {
                     // Force new snow event, since it might have changed from snow to rain or vice versa
