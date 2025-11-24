@@ -141,7 +141,8 @@ public class SnowHandler {
         int lastFullEventIndex = 0;
         for (int i = events.size() - 1; i >= 0; i--) {
             SeasonEvent event = events.get(i);
-            if (event.start >= lastUpdateTime && (event.end - event.start >= MAX_TICKS_FOR_CHUNK_UPDATE)) {
+            long end = event.end != 0 ? event.end : world.getTotalWorldTime();
+            if (event.start >= lastUpdateTime && (end - event.start >= MAX_TICKS_FOR_CHUNK_UPDATE)) {
                 lastFullEventIndex = i + 1;
                 Arrays.fill(lastChangeTick, event.start + 1); // Must not set to 0
                 Arrays.fill(hasChange, true);
