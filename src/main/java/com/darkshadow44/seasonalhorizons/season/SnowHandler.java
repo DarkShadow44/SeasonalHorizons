@@ -157,11 +157,11 @@ public class SnowHandler {
             for (int k = 0; k < 256; k++) {
                 ScheduleEntry entry = schedule[k];
 
-                if (entry.tick >= startIndex1 && entry.tick <= endIndex1
-                    || (startIndex2 != -1 && entry.tick >= startIndex2 && entry.tick <= endIndex2)) {
+                if (entry.tick >= startIndex1 && entry.tick < endIndex1
+                    || (startIndex2 != -1 && entry.tick >= startIndex2 && entry.tick < endIndex2)) {
                     if (handlingWinterBlock) {
                         // This gets skipped when it snows in summer, since perma snow only needs th
-                        lastChangeTick[entry.blockPos] = start + k;
+                        lastChangeTick[entry.blockPos] = start + entry.tick;
                     }
                     hasChange[entry.blockPos] = true;
                 }
