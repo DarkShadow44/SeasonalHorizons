@@ -234,6 +234,7 @@ public class SnowHandler {
                 if (!snowChanges[index] && !thawChanges[index]) {
                     continue;
                 }
+
                 int x = (chunk.xPosition << 4) + i;
                 int z = (chunk.zPosition << 4) + j;
                 BiomeGenBase biome = world.getBiomeGenForCoords(x, z);

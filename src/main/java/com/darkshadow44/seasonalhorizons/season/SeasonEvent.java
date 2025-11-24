@@ -10,7 +10,7 @@ public class SeasonEvent {
     public final long start;
     public long end;
 
-    private SeasonEvent(int seed, boolean isWinter, long start) {
+    public SeasonEvent(int seed, boolean isWinter, long start) {
         this.seed = seed;
         this.isWinter = isWinter;
         this.start = start;
