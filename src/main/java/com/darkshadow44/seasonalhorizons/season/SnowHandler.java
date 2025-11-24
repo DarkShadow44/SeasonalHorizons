@@ -21,6 +21,7 @@ public class SnowHandler {
     private static final int MAX_EVENT_CACHE = 10;
 
     private final List<int[]> chunkSchedules = new ArrayList<>();
+    private final List<ScheduleEntry[]> chunkSchedulesSparse = new ArrayList<>();
 
     private final World world;
 
@@ -33,7 +34,9 @@ public class SnowHandler {
 
         Random random = new Random(world.getSeed());
         for (int i = 0; i < MAX_CHUNK_SCHEDULES_MASK + 1; i++) {
-            chunkSchedules.add(generateBlockSchedule(random.nextInt()));
+            int[] schedule = generateBlockSchedule(random.nextInt());
+            chunkSchedules.add(schedule);
+            chunkSchedulesSparse.add(generateBlockScheduleSparse(schedule));
         }
     }
 
@@ -70,9 +73,26 @@ public class SnowHandler {
         return schedule;
     }
 
+    private ScheduleEntry[] generateBlockScheduleSparse(int[] schedule) {
+        ScheduleEntry[] ret = new ScheduleEntry[256];
+        int pos = 0;
+        for (int i = 0; i < MAX_TICKS_FOR_CHUNK_UPDATE; i++) {
+            int blockPos = schedule[i];
+            if (blockPos != -1) {
+                ret[pos++] = new ScheduleEntry(i, blockPos );
+            }
+        }
+        return ret;
+    }
+
     private int[] getBlockSchedule(int seed, int chunkX, int chunkZ) {
         int scheduleIndex = mix(seed ^ mix(chunkX) ^ mix(chunkZ)) & MAX_CHUNK_SCHEDULES_MASK;
         return chunkSchedules.get(scheduleIndex);
+    }
+
+    private ScheduleEntry[] getBlockScheduleSparse(int seed, int chunkX, int chunkZ) {
+        int scheduleIndex = mix(seed ^ mix(chunkX) ^ mix(chunkZ)) & MAX_CHUNK_SCHEDULES_MASK;
+        return chunkSchedulesSparse.get(scheduleIndex);
     }
 
     private void processBlock(int x, int z, boolean snow) {
@@ -113,38 +133,37 @@ public class SnowHandler {
             }
 
             long start = Math.max(lastUpdateTime, event.start);
-            int count = (int) (end - start);
 
-            int[] schedule = getBlockSchedule(event.seed, chunk.xPosition, chunk.zPosition);
+            ScheduleEntry[] schedule = getBlockScheduleSparse(event.seed, chunk.xPosition, chunk.zPosition);
 
-            int pos = (int) (start % MAX_TICKS_FOR_CHUNK_UPDATE);
+            int startIndex1 = (int) (start % MAX_TICKS_FOR_CHUNK_UPDATE);
+            int endIndex1 = (int) (end % MAX_TICKS_FOR_CHUNK_UPDATE);
 
-            if (event.isWinter == handlingSnow) {
-                // Dealing with an event relevant for normal biomes
-                // Otherwise we have perma snow/thaw
-                for (int k = 0; k < count; k++) {
-                    if (pos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
-                        pos = 0;
-                    }
-                    int blockPos = schedule[pos];
-                    if (blockPos != -1) {
-                        lastChangeTick[blockPos] = start + k;
-                        hasChange[blockPos] = true;
-                    }
-                    pos++;
-                }
-            } else if (handlingSnow) {
-                // Snow in summer (perma snow biomes)
+            int startIndex2 = -1;
+            int endIndex2 = -1;
+
+            if (endIndex1 < startIndex1) {
+                startIndex2 = 0;
+                endIndex2 = endIndex1;
+                endIndex1 = MAX_TICKS_FOR_CHUNK_UPDATE - 1;
+            }
+
+            // Either snowing in winter or thaw in summer works for all blocks.
+            boolean handlingWinterBlock = event.isWinter == handlingSnow;
+            if (!handlingWinterBlock && !handlingSnow) {
                 // We ignore thaw in winter in perma thaw biomes. Can't place snow anyways.
-                for (int k = 0; k < count; k++) {
-                    if (pos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
-                        pos = 0;
+                continue;
+            }
+            for (int k = 0; k < 256; k++) {
+                ScheduleEntry entry = schedule[k];
+
+                if (entry.tick >= startIndex1 && entry.tick <= endIndex1
+                    || (startIndex2 != -1 && entry.tick >= startIndex2 && entry.tick <= endIndex2)) {
+                    if (handlingWinterBlock) {
+                        // This gets skipped when it snows in summer, since perma snow only needs th
+                        lastChangeTick[entry.blockPos] = start + k;
                     }
-                    int blockPos = schedule[pos];
-                    if (blockPos != -1) {
-                        hasChange[blockPos] = true;
-                    }
-                    pos++;
+                    hasChange[entry.blockPos] = true;
                 }
             }
         }
@@ -268,4 +287,16 @@ public class SnowHandler {
         }
         seasonWorldData.markDirty();
     }
+
+    private static class ScheduleEntry {
+
+        public final int tick;
+        public final int blockPos;
+
+        public ScheduleEntry(int tick, int blockPos) {
+            this.tick = tick;
+            this.blockPos = blockPos;
+        }
+    }
+
 }
