@@ -190,7 +190,7 @@ public class SnowHandler {
                 int z = (chunk.zPosition << 4) + j;
                 BiomeGenBase biome = world.getBiomeGenForCoords(x, z);
                 boolean isPermaSnow = biome.temperature <= 0.15;
-                boolean isPermaThaw = biome.temperature - 0.7 >= 0.15;
+                boolean isPermaThaw = biome.temperature - 0.7 > 0.15;
 
                 if (isPermaThaw) {
                     continue;
@@ -233,7 +233,7 @@ public class SnowHandler {
             int z = (chunk.zPosition << 4) + (blockPos & 0xf);
             BiomeGenBase biome = chunk.worldObj.getBiomeGenForCoords(x, z);
             float temperature = seasonWorldData.season.getAdjustedTemperature(biome.temperature);
-            boolean canSnow = temperature < 0.15;
+            boolean canSnow = temperature <= 0.15;
             if (canSnow == snow) {
                 processBlock(chunk, x, z, snow);
             }
