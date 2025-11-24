@@ -1,6 +1,8 @@
 package com.darkshadow44.seasonalhorizons;
 
+import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.terraingen.PopulateChunkEvent;
 import net.minecraftforge.event.world.ChunkEvent;
 
 import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
@@ -52,17 +54,33 @@ public class CommonProxy {
     }
 
     @SubscribeEvent
-    public void onChunkLoad(ChunkEvent.Load event) {
+    public void onChunkPopulate(PopulateChunkEvent.Post event) {
         if (event.world.isRemote) {
+            return;
+        }
+
+        Chunk chunk = event.world.getChunkFromChunkCoords(event.chunkX, event.chunkZ);
+
+        IMixinWorldServer mixinWorldServer = (IMixinWorldServer) event.world;
+        SnowHandler snowHandler = mixinWorldServer.seasonalHorizons$getSnowHandler();
+        if (snowHandler != null) { // Can happen during initial world generation or when there is no season
+            IMixinChunk mixinChunk = (IMixinChunk) chunk;
+            snowHandler.processChunk(chunk, mixinChunk.seasonalHorizons$getLastSaveTime());
+        }
+    }
+
+    @SubscribeEvent
+    public void onChunkLoad(ChunkEvent.Load event) {
+        Chunk chunk = event.getChunk();
+        if (event.world.isRemote || !chunk.isChunkLoaded || !chunk.isTerrainPopulated) {
             return;
         }
 
         IMixinWorldServer mixinWorldServer = (IMixinWorldServer) event.world;
         SnowHandler snowHandler = mixinWorldServer.seasonalHorizons$getSnowHandler();
-        if (snowHandler != null) { // Can happen during initial world generation
-            IMixinChunk mixinChunk = (IMixinChunk) event.getChunk();
-
-            snowHandler.processChunk(event.getChunk(), mixinChunk.seasonalHorizons$getLastSaveTime());
+        if (snowHandler != null) { // Can happen during initial world generation or when there is no season
+            IMixinChunk mixinChunk = (IMixinChunk) chunk;
+            snowHandler.processChunk(chunk, mixinChunk.seasonalHorizons$getLastSaveTime());
         }
     }
 }
