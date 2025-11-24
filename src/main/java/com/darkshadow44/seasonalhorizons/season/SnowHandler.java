@@ -187,6 +187,9 @@ public class SnowHandler {
 
     private void handleSnowServerTickStep(Chunk chunk, WeakHashMap<Chunk, int[]> scheduleCache,
         List<SeasonEvent> eventList, boolean snow) {
+        if (eventList.isEmpty()) {
+            return;
+        }
         int[] schedule = scheduleCache.computeIfAbsent(chunk, dummy -> {
             SeasonEvent event = eventList.get(eventList.size() - 1);
             int[] ret = new int[MAX_TICKS_FOR_CHUNK_UPDATE];
