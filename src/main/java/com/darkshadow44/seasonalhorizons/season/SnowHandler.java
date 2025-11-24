@@ -1,8 +1,9 @@
 package com.darkshadow44.seasonalhorizons.season;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.WeakHashMap;
+import java.util.Random;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
@@ -16,14 +17,10 @@ public class SnowHandler {
 
     private static final int MAX_SEASON_LENGTH = 10000;
     private static final int MAX_TICKS_FOR_CHUNK_UPDATE = 1000;
+    private static final int MAX_CHUNK_SCHEDULES_MASK = 0x7F;
     private static final int MAX_EVENT_CACHE = 10;
 
-    // To speed up every tick processing
-    private final WeakHashMap<Chunk, int[]> chunkSchedulesSnow = new WeakHashMap<>();
-    private final WeakHashMap<Chunk, int[]> chunkSchedulesThaw = new WeakHashMap<>();
-
-    // To avoid reallocations
-    private final int[] tempSchedule = new int[MAX_TICKS_FOR_CHUNK_UPDATE];
+    private final List<int[]> chunkSchedules = new ArrayList<>();
 
     private final World world;
 
@@ -33,6 +30,11 @@ public class SnowHandler {
     public SnowHandler(World world, SeasonWorldData seasonWorldData) {
         this.world = world;
         this.seasonWorldData = seasonWorldData;
+
+        Random random = new Random(world.getSeed());
+        for (int i = 0; i < MAX_CHUNK_SCHEDULES_MASK + 1; i++) {
+            chunkSchedules.add(generateBlockSchedule(random.nextInt()));
+        }
     }
 
     private static int mix(int x) {
@@ -48,14 +50,13 @@ public class SnowHandler {
      * Get the block schedule. Length of the array is the maximum time (in ticks) where a chunk should be completely
      * processed. schedule[i] is the coordinate of the block (x * 16 + z) to process at tick i, or -1 for none.
      */
-    public static void getBlockSchedule(int[] schedule, int seed, int chunkX, int chunkZ) {
+    private int[] generateBlockSchedule(int seed) {
+        int[] schedule = new int[MAX_TICKS_FOR_CHUNK_UPDATE];
         final int length = schedule.length;
         Arrays.fill(schedule, -1);
 
-        int seedBase = mix(seed ^ mix(chunkX) ^ mix(chunkZ));
-
         for (int i = 0; i < 256; i++) {
-            long hash = mix(seedBase ^ mix(i));
+            long hash = mix(seed ^ mix(i));
             int slot = (int) (hash % length);
             if (slot < 0) slot += length;
 
@@ -66,6 +67,12 @@ public class SnowHandler {
 
             schedule[slot] = i;
         }
+        return schedule;
+    }
+
+    private int[] getBlockSchedule(int seed, int chunkX, int chunkZ) {
+        int scheduleIndex = mix(seed ^ mix(chunkX) ^ mix(chunkZ)) & MAX_CHUNK_SCHEDULES_MASK;
+        return chunkSchedules.get(scheduleIndex);
     }
 
     private void processBlock(int x, int z, boolean snow) {
@@ -108,7 +115,7 @@ public class SnowHandler {
             long start = Math.max(lastUpdateTime, event.start);
             int count = (int) (end - start);
 
-            getBlockSchedule(tempSchedule, chunk.xPosition, chunk.zPosition, event.seed);
+            int[] schedule = getBlockSchedule(event.seed, chunk.xPosition, chunk.zPosition);
 
             int pos = (int) (start % MAX_TICKS_FOR_CHUNK_UPDATE);
 
@@ -119,7 +126,7 @@ public class SnowHandler {
                     if (pos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
                         pos = 0;
                     }
-                    int blockPos = tempSchedule[pos];
+                    int blockPos = schedule[pos];
                     if (blockPos != -1) {
                         lastChangeTick[blockPos] = start + k;
                         hasChange[blockPos] = true;
@@ -133,7 +140,7 @@ public class SnowHandler {
                     if (pos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
                         pos = 0;
                     }
-                    int blockPos = tempSchedule[pos];
+                    int blockPos = schedule[pos];
                     if (blockPos != -1) {
                         hasChange[blockPos] = true;
                     }
@@ -185,17 +192,14 @@ public class SnowHandler {
         }
     }
 
-    private void handleSnowServerTickStep(Chunk chunk, WeakHashMap<Chunk, int[]> scheduleCache,
-        List<SeasonEvent> eventList, boolean snow) {
+    private void handleSnowServerTickStep(Chunk chunk, List<SeasonEvent> eventList, boolean snow) {
         if (eventList.isEmpty()) {
             return;
         }
-        int[] schedule = scheduleCache.computeIfAbsent(chunk, dummy -> {
-            SeasonEvent event = eventList.get(eventList.size() - 1);
-            int[] ret = new int[MAX_TICKS_FOR_CHUNK_UPDATE];
-            getBlockSchedule(ret, event.seed, chunk.xPosition, chunk.zPosition);
-            return ret;
-        });
+
+        SeasonEvent event = eventList.get(eventList.size() - 1);
+
+        int[] schedule = getBlockSchedule(event.seed, chunk.xPosition, chunk.zPosition);
 
         int pos = (int) (chunk.worldObj.getTotalWorldTime() % MAX_TICKS_FOR_CHUNK_UPDATE);
 
@@ -213,9 +217,9 @@ public class SnowHandler {
     }
 
     public void handleSnowServerTick(Chunk chunk) {
-        handleSnowServerTickStep(chunk, chunkSchedulesThaw, seasonWorldData.thawEvents, false);
+        handleSnowServerTickStep(chunk, seasonWorldData.thawEvents, false);
         if (seasonWorldData.currentIsRaining) {
-            handleSnowServerTickStep(chunk, chunkSchedulesSnow, seasonWorldData.snowEvents, true);
+            handleSnowServerTickStep(chunk, seasonWorldData.snowEvents, true);
         }
     }
 
@@ -225,7 +229,6 @@ public class SnowHandler {
         if (seasonWorldData.lastSeason != seasonWorldData.season) {
             if (seasonWorldData.lastSeason == null
                 || seasonWorldData.season.isWinter() != seasonWorldData.lastSeason.isWinter()) {
-                chunkSchedulesThaw.clear();
                 List<SeasonEvent> thawEvents = seasonWorldData.thawEvents;
                 if (!thawEvents.isEmpty()) {
                     thawEvents.get(thawEvents.size() - 1).end = world.getTotalWorldTime();
@@ -246,7 +249,6 @@ public class SnowHandler {
 
         // Process snowing
         if (seasonWorldData.currentIsRaining != isRaining) {
-            chunkSchedulesSnow.clear();
             List<SeasonEvent> snowEvents = seasonWorldData.snowEvents;
             if (isRaining) {
                 snowEvents.add(new SeasonEvent(world, seasonWorldData.season.isWinter()));
