@@ -4,6 +4,7 @@ import net.minecraft.util.MathHelper;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.darkshadow44.seasonalhorizons.color.SeasonColorMap;
+import com.darkshadow44.seasonalhorizons.mixininterfaces.IMixinBiomeGenBase;
 
 public enum Season {
 
@@ -47,6 +48,12 @@ public enum Season {
     public float getAdjustedTemperature(float temperature) {
         float temperatureChange = isWinter ? -0.7f : 0;
         return MathHelper.clamp_float(temperature + temperatureChange, -0.5f, 2.0f);
+    }
+
+    public float getAdjustedTemperatureFloat(BiomeGenBase biome, int x, int y, int z) {
+        IMixinBiomeGenBase biomeMixin = (IMixinBiomeGenBase) biome;
+        float temperature = getAdjustedTemperature(biome.temperature);
+        return biomeMixin.seasonalHorizons$getAdjustedFloatTemperature(temperature, x, y, z);
     }
 
     public float getAdjustedRainfall(float rainfall) {

@@ -8,7 +8,8 @@
     "MixinBiomeGenBase"
   ],
   "mixins": [
-    "MixinWorldServer",
-    "MixinChunk"
+    "MixinChunk",
+    "MixinWorld",
+    "MixinWorldServer"
   ]
 }
