@@ -95,16 +95,18 @@ public class SnowHandler {
         return chunkSchedulesSparse.get(scheduleIndex);
     }
 
-    private void processBlock(int x, int z, boolean snow) {
-        int y = world.getHeightValue(x, z);
+    private void processBlock(Chunk chunk, int x, int z, boolean snow) {
+        int relX = x & 0xf;
+        int relZ = z & 0xf;
+        int y = chunk.getHeightValue(relX, relZ);
         if (snow) {
             if (world.func_147478_e(x, y, z, true)) {
-                world.setBlock(x, y, z, Blocks.snow_layer, 0, 2);
+                chunk.func_150807_a(relX, y, relZ, Blocks.snow_layer, 0);
             }
         } else {
-            Block block = world.getBlock(x, y, z);
+            Block block = chunk.getBlock(relX, y, relZ);
             if (block == Blocks.snow_layer) {
-                world.setBlock(x, y, z, Blocks.air);
+                chunk.func_150807_a(relX, y, relZ, Blocks.air, 0);
             }
         }
     }
@@ -196,7 +198,7 @@ public class SnowHandler {
 
                 if (isPermaSnow) {
                     if (snowChanges[index]) {
-                        processBlock(x, z, true);
+                        processBlock(chunk, x, z, true);
                     }
                     continue;
                 }
@@ -206,9 +208,9 @@ public class SnowHandler {
                 }
 
                 if (lastSnowTick[index] != 0 && lastThawTick[index] != 0) {
-                    processBlock(x, z, lastSnowTick[index] > lastThawTick[index]);
+                    processBlock(chunk, x, z, lastSnowTick[index] > lastThawTick[index]);
                 } else {
-                    processBlock(x, z, lastSnowTick[index] != 0);
+                    processBlock(chunk, x, z, lastSnowTick[index] != 0);
                 }
             }
         }
@@ -233,7 +235,7 @@ public class SnowHandler {
             float temperature = seasonWorldData.season.getAdjustedTemperature(biome.temperature);
             boolean canSnow = temperature < 0.15;
             if (canSnow == snow) {
-                processBlock(x, z, snow);
+                processBlock(chunk, x, z, snow);
             }
         }
     }
