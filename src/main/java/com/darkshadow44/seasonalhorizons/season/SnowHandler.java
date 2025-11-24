@@ -79,7 +79,7 @@ public class SnowHandler {
         for (int i = 0; i < MAX_TICKS_FOR_CHUNK_UPDATE; i++) {
             int blockPos = schedule[i];
             if (blockPos != -1) {
-                ret[pos++] = new ScheduleEntry(i, blockPos );
+                ret[pos++] = new ScheduleEntry(i, blockPos);
             }
         }
         return ret;
@@ -173,7 +173,7 @@ public class SnowHandler {
         long[] lastSnowTick = new long[256];
         long[] lastThawTick = new long[256];
         boolean[] snowChanges = new boolean[256];
-        boolean[] thawChanges = new boolean[256]; // Not used as of now
+        boolean[] thawChanges = new boolean[256];
 
         calculateChunkLastTicks(seasonWorldData.snowEvents, lastSnowTick, snowChanges, true, chunk, lastUpdateTime);
         calculateChunkLastTicks(seasonWorldData.thawEvents, lastThawTick, thawChanges, false, chunk, lastUpdateTime);
@@ -181,6 +181,9 @@ public class SnowHandler {
         for (int i = 0; i < 16; i++) {
             for (int j = 0; j < 16; j++) {
                 int index = (i << 4) + j;
+                if (!snowChanges[index] && !thawChanges[index]) {
+                    continue;
+                }
                 int x = (chunk.xPosition << 4) + i;
                 int z = (chunk.zPosition << 4) + j;
                 BiomeGenBase biome = world.getBiomeGenForCoords(x, z);
