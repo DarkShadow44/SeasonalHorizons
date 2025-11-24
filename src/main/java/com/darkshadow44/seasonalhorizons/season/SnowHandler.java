@@ -187,7 +187,7 @@ public class SnowHandler {
                 if (entry.tick >= startIndex1 && entry.tick < endIndex1
                     || (startIndex2 != -1 && entry.tick >= startIndex2 && entry.tick < endIndex2)) {
                     if (handlingWinterBlock) {
-                        // This gets skipped when it snows in summer, since perma snow only needs th
+                        // This gets skipped when it snows in summer, since perma snow only needs that
                         lastChangeTick[entry.blockPos] = start + entry.tick;
                     }
                     hasChange[entry.blockPos] = true;
