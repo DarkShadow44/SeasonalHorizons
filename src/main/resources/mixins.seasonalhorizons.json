@@ -4,12 +4,10 @@
   "target": "@env(DEFAULT)",
   "minVersion": "0.7",
   "compatibilityLevel": "JAVA_21",
-  "client": [
-    "MixinBiomeGenBase"
-  ],
   "mixins": [
     "MixinChunk",
     "MixinWorld",
-    "MixinWorldServer"
+    "MixinWorldServer",
+    "MixinBiomeGenBase"
   ]
 }
