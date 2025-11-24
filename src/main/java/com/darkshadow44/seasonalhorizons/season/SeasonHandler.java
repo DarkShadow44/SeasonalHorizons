@@ -28,7 +28,7 @@ public class SeasonHandler {
             .findAny();
     }
 
-    private static Season currentSeasonClient = Season.AUTUMN_EARLY;
+    private static Season currentSeasonClient = Season.SPRING_EARLY;
 
     public static void updateClientSeason(Season season) {
         if (season == currentSeasonClient) {
