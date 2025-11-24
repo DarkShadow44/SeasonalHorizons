@@ -136,8 +136,23 @@ public class SnowHandler {
         }
     }
 
+    private void calculateChunkLastTicksApply(ScheduleEntry[] schedule, boolean handlingWinterBlock, long start,
+        int startIndex, int endIndex, long[] lastChangeTick, boolean[] hasChange) {
+        for (int k = 0; k < 256; k++) {
+            ScheduleEntry entry = schedule[k];
+            if (entry.tick >= startIndex && entry.tick < endIndex) {
+                if (handlingWinterBlock) {
+                    // This gets skipped when it snows in summer, since perma snow only needs that
+                    lastChangeTick[entry.blockPos] = start + entry.tick - startIndex;
+                }
+                hasChange[entry.blockPos] = true;
+            }
+        }
+    }
+
     private void calculateChunkLastTicks(List<SeasonEvent> events, long[] lastChangeTick, boolean[] hasChange,
         boolean handlingSnow, Chunk chunk, long lastUpdateTime) {
+
         int lastFullEventIndex = 0;
         for (int i = events.size() - 1; i >= 0; i--) {
             SeasonEvent event = events.get(i);
@@ -153,6 +168,13 @@ public class SnowHandler {
         for (int i = lastFullEventIndex; i < events.size(); i++) {
             SeasonEvent event = events.get(i);
 
+            // Either snowing in winter or thaw in summer works for all blocks.
+            boolean handlingWinterBlock = event.isWinter == handlingSnow;
+            if (!handlingWinterBlock && !handlingSnow) {
+                // We ignore thaw in winter in perma thaw biomes. Can't place snow anyways.
+                continue;
+            }
+
             long end = event.end != 0 ? event.end : world.getTotalWorldTime();
 
             // Skip events that are not ongoing and have fully happened before chunk was unloaded
@@ -167,32 +189,32 @@ public class SnowHandler {
             int startIndex1 = (int) (start % MAX_TICKS_FOR_CHUNK_UPDATE);
             int endIndex1 = (int) (end % MAX_TICKS_FOR_CHUNK_UPDATE);
 
-            int startIndex2 = -1;
-            int endIndex2 = -1;
-
+            int startIndex2 = -1, endIndex2 = -1;
             if (endIndex1 < startIndex1) {
                 startIndex2 = 0;
                 endIndex2 = endIndex1;
-                endIndex1 = MAX_TICKS_FOR_CHUNK_UPDATE - 1;
+                endIndex1 = MAX_TICKS_FOR_CHUNK_UPDATE;
             }
 
-            // Either snowing in winter or thaw in summer works for all blocks.
-            boolean handlingWinterBlock = event.isWinter == handlingSnow;
-            if (!handlingWinterBlock && !handlingSnow) {
-                // We ignore thaw in winter in perma thaw biomes. Can't place snow anyways.
-                continue;
-            }
-            for (int k = 0; k < 256; k++) {
-                ScheduleEntry entry = schedule[k];
-
-                if (entry.tick >= startIndex1 && entry.tick < endIndex1
-                    || (startIndex2 != -1 && entry.tick >= startIndex2 && entry.tick < endIndex2)) {
-                    if (handlingWinterBlock) {
-                        // This gets skipped when it snows in summer, since perma snow only needs that
-                        lastChangeTick[entry.blockPos] = start + entry.tick;
-                    }
-                    hasChange[entry.blockPos] = true;
-                }
+            calculateChunkLastTicksApply(
+                schedule,
+                handlingWinterBlock,
+                start,
+                startIndex1,
+                endIndex1,
+                lastChangeTick,
+                hasChange);
+            if (startIndex2 != -1) {
+                // Next block, wraparound
+                start += MAX_TICKS_FOR_CHUNK_UPDATE - startIndex1;
+                calculateChunkLastTicksApply(
+                    schedule,
+                    handlingWinterBlock,
+                    start,
+                    startIndex2,
+                    endIndex2,
+                    lastChangeTick,
+                    hasChange);
             }
         }
     }
