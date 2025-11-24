@@ -15,7 +15,7 @@ import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
 public class SnowHandler {
 
     private static final int MAX_SEASON_LENGTH = 10000;
-    private static final int MAX_TICKS_FOR_CHUNK_UPDATE = 20000;
+    private static final int MAX_TICKS_FOR_CHUNK_UPDATE = 1000;
     private static final int MAX_EVENT_CACHE = 10;
 
     // To speed up every tick processing
