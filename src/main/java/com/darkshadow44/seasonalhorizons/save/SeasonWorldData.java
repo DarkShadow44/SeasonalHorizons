@@ -6,6 +6,7 @@ import java.util.List;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.WorldSavedData;
+import net.minecraftforge.common.util.Constants;
 
 import com.darkshadow44.seasonalhorizons.season.Season;
 import com.darkshadow44.seasonalhorizons.season.SeasonEvent;
@@ -54,8 +55,8 @@ public class SeasonWorldData extends WorldSavedData {
         seasonTicks = tag.getInteger("seasonTicks");
         lastSeason = Season.values()[tag.getByte("lastSeason")];
         currentIsRaining = tag.getBoolean("currentIsRaining");
-        snowEvents = readSeasonEventList(tag.getTagList("snowEvents", 10));
-        thawEvents = readSeasonEventList(tag.getTagList("thawEvents", 10));
+        snowEvents = readSeasonEventList(tag.getTagList("snowEvents", Constants.NBT.TAG_COMPOUND));
+        thawEvents = readSeasonEventList(tag.getTagList("thawEvents", Constants.NBT.TAG_COMPOUND));
     }
 
     @Override
