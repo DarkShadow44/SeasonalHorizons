@@ -35,15 +35,17 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
     }
 
     @Inject(method = "<init>", at = @At("TAIL"))
-    private void constructor(MinecraftServer p_i45284_1_, ISaveHandler p_i45284_2_, String p_i45284_3_, int p_i45284_4_,
-        WorldSettings p_i45284_5_, Profiler p_i45284_6_, CallbackInfo ci) {
-        seasonalHorizons$seasonWorldData = (SeasonWorldData) this
-            .loadItemData(SeasonWorldData.class, "seasonalhorizons");
-        if (seasonalHorizons$seasonWorldData == null) {
-            seasonalHorizons$seasonWorldData = new SeasonWorldData();
-            this.setItemData("seasonalhorizons", seasonalHorizons$seasonWorldData);
+    private void constructor(MinecraftServer p_i45284_1_, ISaveHandler p_i45284_2_, String p_i45284_3_, int dimension,
+        WorldSettings worldSettings, Profiler p_i45284_6_, CallbackInfo ci) {
+        if (dimension == 0) {
+            String dataName = "seasonalhorizons";
+            seasonalHorizons$seasonWorldData = (SeasonWorldData) this.loadItemData(SeasonWorldData.class, dataName);
+            if (seasonalHorizons$seasonWorldData == null) {
+                seasonalHorizons$seasonWorldData = new SeasonWorldData(dataName);
+                this.setItemData(dataName, seasonalHorizons$seasonWorldData);
+            }
+            seasonalHorizons$snowHandler = new SnowHandler(this, seasonalHorizons$seasonWorldData);
         }
-        seasonalHorizons$snowHandler = new SnowHandler(this, seasonalHorizons$seasonWorldData);
     }
 
     @Redirect(
@@ -60,13 +62,17 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
             target = "Lnet/minecraft/world/WorldProvider;canDoRainSnowIce(Lnet/minecraft/world/chunk/Chunk;)Z",
             remap = false))
     private boolean handleSnow(WorldProvider instance, Chunk chunk) {
-        seasonalHorizons$snowHandler.handleSnowServerTick(chunk);
+        if (seasonalHorizons$snowHandler != null) {
+            seasonalHorizons$snowHandler.handleSnowServerTick(chunk);
+        }
         return instance.canDoRainSnowIce(chunk);
     }
 
     @Inject(method = "func_147456_g", at = @At("HEAD"))
     private void handleSnowGlobal(CallbackInfo ci) {
-        seasonalHorizons$snowHandler.handleSnowServerGlobal();
+        if (seasonalHorizons$snowHandler != null) {
+            seasonalHorizons$snowHandler.handleSnowServerGlobal();
+        }
     }
 
     @Override

@@ -49,7 +49,7 @@ public class SeasonHandler {
 
         SeasonWorldData seasonWorldData = ((IMixinWorldServer) world).seasonalHorizons$getSeasonWorldData();
 
-        if (seasonWorldData.season == season) {
+        if (seasonWorldData == null || seasonWorldData.season == season) {
             return;
         }
         seasonWorldData.season = season;
@@ -59,6 +59,9 @@ public class SeasonHandler {
     public static Season getSeasonForWorld(World world) {
         if (world instanceof WorldServer) {
             SeasonWorldData seasonWorldData = ((IMixinWorldServer) world).seasonalHorizons$getSeasonWorldData();
+            if (seasonWorldData == null) {
+                return null;
+            }
             return seasonWorldData.season;
         }
 

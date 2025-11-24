@@ -26,11 +26,6 @@ public class SeasonWorldData extends WorldSavedData {
     // List of all times it thawed (at most MAX_EVENT_CACHE entries)
     public List<SeasonEvent> thawEvents = new ArrayList<>();
 
-    public SeasonWorldData() {
-        super("seasonalhorizons");
-    }
-
-    // For reflection
     public SeasonWorldData(String name) {
         super(name);
     }
