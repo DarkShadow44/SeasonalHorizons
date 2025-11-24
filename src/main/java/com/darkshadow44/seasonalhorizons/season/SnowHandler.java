@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Random;
 
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockLeavesBase;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -104,11 +105,33 @@ public class SnowHandler {
                 chunk.func_150807_a(relX, y, relZ, Blocks.snow_layer, 0);
                 world.markBlockForUpdate(x, y, z);
             }
+            // Snow under trees
+            boolean cont = true;
+            while (cont) {
+                y--;
+                Block block = chunk.getBlock(relX, y, relZ);
+                cont = block instanceof BlockLeavesBase || block.isAir(world, x, y, z);
+            }
+            if (world.func_147478_e(x, y + 1, z, true)) {
+                chunk.func_150807_a(relX, y + 1, relZ, Blocks.snow_layer, 0);
+                world.markBlockForUpdate(x, y + 1, z);
+            }
         } else {
             Block block = chunk.getBlock(relX, y, relZ);
             if (block == Blocks.snow_layer) {
                 chunk.func_150807_a(relX, y, relZ, Blocks.air, 0);
                 world.markBlockForUpdate(x, y, z);
+            }
+            // Snow under trees
+            boolean cont = true;
+            while (cont) {
+                y--;
+                block = chunk.getBlock(relX, y, relZ);
+                cont = block instanceof BlockLeavesBase || block.isAir(world, x, y, z);
+                if (block == Blocks.snow_layer) {
+                    chunk.func_150807_a(relX, y, relZ, Blocks.air, 0);
+                    world.markBlockForUpdate(x, y, z);
+                }
             }
         }
     }
