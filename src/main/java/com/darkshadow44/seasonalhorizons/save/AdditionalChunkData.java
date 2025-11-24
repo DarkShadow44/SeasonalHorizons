@@ -43,16 +43,16 @@ public class AdditionalChunkData implements DataManager.ChunkDataManager {
 
     @Override
     public String newInstallDescription() {
-        return "";
+        return "Seasonal Horizons Season support";
     }
 
     @Override
     public String uninstallMessage() {
-        return "";
+        return "Seasonal Horizons  Season support";
     }
 
     @Override
     public String versionChangeMessage(String priorVersion) {
-        return "";
+        return null;
     }
 }

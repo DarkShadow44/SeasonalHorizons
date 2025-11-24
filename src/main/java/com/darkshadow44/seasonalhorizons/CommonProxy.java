@@ -59,8 +59,10 @@ public class CommonProxy {
 
         IMixinWorldServer mixinWorldServer = (IMixinWorldServer) event.world;
         SnowHandler snowHandler = mixinWorldServer.seasonalHorizons$getSnowHandler();
-        IMixinChunk mixinChunk = (IMixinChunk) event.getChunk();
+        if (snowHandler != null) { // Can happen during initial world generation
+            IMixinChunk mixinChunk = (IMixinChunk) event.getChunk();
 
-        snowHandler.processChunk(event.getChunk(), mixinChunk.seasonalHorizons$getLastSaveTime());
+            snowHandler.processChunk(event.getChunk(), mixinChunk.seasonalHorizons$getLastSaveTime());
+        }
     }
 }

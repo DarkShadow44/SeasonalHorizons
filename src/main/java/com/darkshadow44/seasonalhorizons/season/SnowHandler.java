@@ -19,7 +19,8 @@ public class SnowHandler {
     private static final int MAX_EVENT_CACHE = 10;
 
     // To speed up every tick processing
-    private final WeakHashMap<Chunk, int[]> chunkSchedules = new WeakHashMap<>();
+    private final WeakHashMap<Chunk, int[]> chunkSchedulesSnow = new WeakHashMap<>();
+    private final WeakHashMap<Chunk, int[]> chunkSchedulesThaw = new WeakHashMap<>();
 
     // To avoid reallocations
     private final int[] tempSchedule = new int[MAX_TICKS_FOR_CHUNK_UPDATE];
@@ -146,9 +147,10 @@ public class SnowHandler {
         long[] lastSnowTick = new long[256];
         long[] lastThawTick = new long[256];
         boolean[] snowChanges = new boolean[256];
+        boolean[] thawChanges = new boolean[256]; // Not used as of now
 
         calculateChunkLastTicks(seasonWorldData.snowEvents, lastSnowTick, snowChanges, true, chunk, lastUpdateTime);
-        calculateChunkLastTicks(seasonWorldData.thawEvents, lastThawTick, null, false, chunk, lastUpdateTime);
+        calculateChunkLastTicks(seasonWorldData.thawEvents, lastThawTick, thawChanges, false, chunk, lastUpdateTime);
 
         for (int i = 0; i < 16; i++) {
             for (int j = 0; j < 16; j++) {
@@ -183,24 +185,34 @@ public class SnowHandler {
         }
     }
 
-    public void handleSnowServerTick(Chunk chunk) {
-        int[] schedule = chunkSchedules.computeIfAbsent(chunk, dummy -> {
+    private void handleSnowServerTickStep(Chunk chunk, WeakHashMap<Chunk, int[]> scheduleCache,
+        List<SeasonEvent> eventList, boolean snow) {
+        int[] schedule = scheduleCache.computeIfAbsent(chunk, dummy -> {
+            SeasonEvent event = eventList.get(eventList.size() - 1);
             int[] ret = new int[MAX_TICKS_FOR_CHUNK_UPDATE];
-            getBlockSchedule(ret, 0, chunk.xPosition, chunk.zPosition);
+            getBlockSchedule(ret, event.seed, chunk.xPosition, chunk.zPosition);
             return ret;
         });
 
         int pos = (int) (chunk.worldObj.getTotalWorldTime() % MAX_TICKS_FOR_CHUNK_UPDATE);
+
         int blockPos = schedule[pos];
         if (blockPos != -1) {
             int x = (chunk.xPosition << 4) + (blockPos >> 4);
             int z = (chunk.zPosition << 4) + (blockPos & 0xf);
             BiomeGenBase biome = chunk.worldObj.getBiomeGenForCoords(x, z);
             float temperature = seasonWorldData.season.getAdjustedTemperature(biome.temperature);
-            boolean snow = temperature < 0.15;
-            if (!snow || seasonWorldData.currentIsRaining) {
+            boolean canSnow = temperature < 0.15;
+            if (canSnow == snow) {
                 processBlock(x, z, snow);
             }
+        }
+    }
+
+    public void handleSnowServerTick(Chunk chunk) {
+        handleSnowServerTickStep(chunk, chunkSchedulesThaw, seasonWorldData.thawEvents, false);
+        if (seasonWorldData.currentIsRaining) {
+            handleSnowServerTickStep(chunk, chunkSchedulesSnow, seasonWorldData.snowEvents, true);
         }
     }
 
@@ -210,13 +222,16 @@ public class SnowHandler {
         if (seasonWorldData.lastSeason != seasonWorldData.season) {
             if (seasonWorldData.lastSeason == null
                 || seasonWorldData.season.isWinter() != seasonWorldData.lastSeason.isWinter()) {
+                chunkSchedulesThaw.clear();
                 List<SeasonEvent> thawEvents = seasonWorldData.thawEvents;
                 if (!thawEvents.isEmpty()) {
                     thawEvents.get(thawEvents.size() - 1).end = world.getTotalWorldTime();
                 }
-                thawEvents.add(new SeasonEvent(world, seasonWorldData.season.isWinter()));
-                if (thawEvents.size() > MAX_EVENT_CACHE) {
-                    thawEvents.remove(0);
+                if (!seasonWorldData.season.isWinter()) {
+                    thawEvents.add(new SeasonEvent(world, false));
+                    if (thawEvents.size() > MAX_EVENT_CACHE) {
+                        thawEvents.remove(0);
+                    }
                 }
                 if (isRaining) {
                     // Force new snow event, since it might have changed from snow to rain or vice versa
@@ -228,6 +243,7 @@ public class SnowHandler {
 
         // Process snowing
         if (seasonWorldData.currentIsRaining != isRaining) {
+            chunkSchedulesSnow.clear();
             List<SeasonEvent> snowEvents = seasonWorldData.snowEvents;
             if (isRaining) {
                 snowEvents.add(new SeasonEvent(world, seasonWorldData.season.isWinter()));
@@ -245,5 +261,6 @@ public class SnowHandler {
             seasonWorldData.seasonTicks = 0;
             seasonWorldData.season = seasonWorldData.season.nextSeason();
         }
+        seasonWorldData.markDirty();
     }
 }

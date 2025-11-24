@@ -39,7 +39,11 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
         WorldSettings p_i45284_5_, Profiler p_i45284_6_, CallbackInfo ci) {
         seasonalHorizons$seasonWorldData = (SeasonWorldData) this
             .loadItemData(SeasonWorldData.class, "seasonalhorizons");
-        seasonalHorizons$snowHandler = new SnowHandler((World) (Object) this, seasonalHorizons$seasonWorldData);
+        if (seasonalHorizons$seasonWorldData == null) {
+            seasonalHorizons$seasonWorldData = new SeasonWorldData();
+            this.setItemData("seasonalhorizons", seasonalHorizons$seasonWorldData);
+        }
+        seasonalHorizons$snowHandler = new SnowHandler(this, seasonalHorizons$seasonWorldData);
     }
 
     @Redirect(

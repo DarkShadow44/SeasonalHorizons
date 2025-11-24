@@ -12,7 +12,7 @@ import com.darkshadow44.seasonalhorizons.season.SeasonEvent;
 
 public class SeasonWorldData extends WorldSavedData {
 
-    public Season season;
+    public Season season = Season.SPRING_EARLY;
 
     public int seasonTicks;
 
@@ -28,6 +28,11 @@ public class SeasonWorldData extends WorldSavedData {
 
     public SeasonWorldData() {
         super("seasonalhorizons");
+    }
+
+    // For reflection
+    public SeasonWorldData(String name) {
+        super(name);
     }
 
     private List<SeasonEvent> readSeasonEventList(NBTTagList tagList) {
