@@ -102,11 +102,13 @@ public class SnowHandler {
         if (snow) {
             if (world.func_147478_e(x, y, z, true)) {
                 chunk.func_150807_a(relX, y, relZ, Blocks.snow_layer, 0);
+                world.markBlockForUpdate(x, y, z);
             }
         } else {
             Block block = chunk.getBlock(relX, y, relZ);
             if (block == Blocks.snow_layer) {
                 chunk.func_150807_a(relX, y, relZ, Blocks.air, 0);
+                world.markBlockForUpdate(x, y, z);
             }
         }
     }
