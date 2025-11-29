@@ -57,7 +57,7 @@ public class SnowHandler {
 
         for (int repeat = 0; repeat < MAX_BLOCK_REPEAT; repeat++) {
             for (int i = 0; i < 256; i++) {
-                long hash = mix(seed ^ mix(i));
+                long hash = mix(mix(seed ^ mix(i) ^ mix(repeat)));
                 int slot = (int) (hash % MAX_TICKS_FOR_CHUNK_UPDATE);
                 if (slot < 0) slot += MAX_TICKS_FOR_CHUNK_UPDATE;
 
@@ -167,12 +167,14 @@ public class SnowHandler {
                     continue;
                 }
 
-                if (lastThawTicksSummer[index] > lastUpdateTime) {
-                    processBlock(chunk, x, z, false);
-                }
-
-                if (lastSnowTicksWinter[index] > lastUpdateTime) {
-                    processBlock(chunk, x, z, true);
+                if (lastThawTicksSummer[index] > lastSnowTicksWinter[index]) {
+                    if (lastThawTicksSummer[index] > lastUpdateTime) {
+                        processBlock(chunk, x, z, false);
+                    }
+                } else {
+                    if (lastSnowTicksWinter[index] > lastUpdateTime) {
+                        processBlock(chunk, x, z, true);
+                    }
                 }
             }
         }
