@@ -2,6 +2,7 @@ package com.darkshadow44.seasonalhorizons.season;
 
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.WeakHashMap;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockLeavesBase;
@@ -21,6 +22,8 @@ public class SnowHandler {
 
     // Of format [(chunkX % 16) << 4 + (chunkY % 16))] [(blockX % 16) << 4 + (blockY % 16)] []
     private final int[][][] chunkSchedules = new int[256][MAX_TICKS_FOR_CHUNK_UPDATE][];
+
+    private final WeakHashMap<Chunk, BiomeGenBase[]> chunkBiomeCache = new WeakHashMap<>();
 
     private final World world;
 
@@ -99,7 +102,8 @@ public class SnowHandler {
         int relZ = z & 0xf;
         int y = chunk.getHeightValue(relX, relZ);
         if (snow) {
-            if (chunk.getBlock(relX, y -1, relZ).isAir(world, x, y, z)) {
+            if (chunk.getBlock(relX, y - 1, relZ)
+                .isAir(world, x, y, z)) {
                 return;
             }
             if (world.func_147478_e(x, y, z, true)) {
@@ -138,7 +142,6 @@ public class SnowHandler {
     }
 
     public void processChunk(Chunk chunk, long lastUpdateTime) {
-
         int chunkIndex = getBlockScheduleIndex(chunk.xPosition, chunk.zPosition);
         chunkIndex = chunkIndex << 8;
 
@@ -187,12 +190,20 @@ public class SnowHandler {
         int index = getBlockScheduleIndex(chunk.xPosition, chunk.zPosition);
         int[] schedule = chunkSchedules[index][seasonWorldData.schedulePos];
 
+        BiomeGenBase[] biomes = chunkBiomeCache.computeIfAbsent(chunk, (dummy) -> {
+            BiomeGenBase[] ret = new BiomeGenBase[256];
+            for (int i = 0; i < 256; i++) {
+                ret[i] = chunk.worldObj.getBiomeGenForCoords(i >> 4, i & 0xf);
+            }
+            return ret;
+        });
+
         for (int i = 0; i < schedule.length; i++) {
             int blockPos = schedule[i];
             int x = (chunk.xPosition << 4) + (blockPos >> 4);
             int z = (chunk.zPosition << 4) + (blockPos & 0xf);
 
-            BiomeGenBase biome = chunk.worldObj.getBiomeGenForCoords(x, z);
+            BiomeGenBase biome = biomes[blockPos];
             float temperature = seasonWorldData.season.getAdjustedTemperature(biome.temperature);
             boolean canSnow = temperature <= 0.15;
 
