@@ -99,6 +99,9 @@ public class SnowHandler {
         int relZ = z & 0xf;
         int y = chunk.getHeightValue(relX, relZ);
         if (snow) {
+            if (chunk.getBlock(relX, y -1, relZ).isAir(world, x, y, z)) {
+                return;
+            }
             if (world.func_147478_e(x, y, z, true)) {
                 chunk.func_150807_a(relX, y, relZ, Blocks.snow_layer, 0);
                 world.markBlockForUpdate(x, y, z);
