@@ -20,6 +20,6 @@ public class MixinChunk implements IMixinChunk {
 
     @Override
     public long seasonalHorizons$getLastSaveTime() {
-        return seasonalHorizons$lastSaveTime;
+        return 0;
     }
 }

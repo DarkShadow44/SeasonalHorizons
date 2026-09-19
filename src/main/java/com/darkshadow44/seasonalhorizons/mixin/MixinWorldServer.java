@@ -1,5 +1,6 @@
 package com.darkshadow44.seasonalhorizons.mixin;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.profiler.Profiler;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.World;
@@ -68,10 +69,20 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
         return instance.canDoRainSnowIce(chunk);
     }
 
+    int count = 0;
+
     @Inject(method = "func_147456_g", at = @At("HEAD"))
     private void handleSnowGlobal(CallbackInfo ci) {
         if (seasonalHorizons$snowHandler != null) {
             seasonalHorizons$snowHandler.handleSnowServerGlobal();
+
+
+            count++;
+            if (count % 20 == 0) {
+                Minecraft.getMinecraft().func_152344_a(() ->
+                    seasonalHorizons$snowHandler.uploadDataToDH()
+                );
+            }
         }
     }
 
