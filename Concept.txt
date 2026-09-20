@@ -34,3 +34,6 @@ DH Logic:
 SimpleClouds:
 - Frost accumulates randomly, just slower than when it snows
 - special effect to show "frost weather" is in effect
+
+
+keep grid, but randomize the new pattern everytime it snows / thaws
