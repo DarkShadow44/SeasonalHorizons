@@ -129,7 +129,7 @@ public class SnowHandler {
             }
             // Snow under trees
             boolean cont = true;
-            while (cont) {
+            while (cont && y > 0) {
                 y--;
                 Block block = chunk.getBlock(relX, y, relZ);
                 cont = block instanceof BlockLeavesBase || block.isAir(world, x, y, z);
@@ -146,7 +146,7 @@ public class SnowHandler {
             }
             // Snow under trees
             boolean cont = true;
-            while (cont) {
+            while (cont && y > 0) {
                 y--;
                 block = chunk.getBlock(relX, y, relZ);
                 cont = block instanceof BlockLeavesBase || block.isAir(world, x, y, z);
