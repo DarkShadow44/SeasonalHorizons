@@ -173,8 +173,9 @@ public class SnowHandler {
                 int x = (chunk.xPosition << 4) + i;
                 int z = (chunk.zPosition << 4) + j;
                 BiomeGenBase biome = world.getBiomeGenForCoords(x, z);
-                boolean isPermaSnow = biome.temperature <= 0.15;
-                boolean isPermaThaw = biome.temperature - 0.7 > 0.15;
+                int y = chunk.getHeightValue(i, j);
+                boolean isPermaSnow = Season.SUMMER_MID.getAdjustedTemperatureFloat(biome, x, y, z) <= 0.15;
+                boolean isPermaThaw = Season.WINTER_MID.getAdjustedTemperatureFloat(biome, x, y, z) > 0.15;
 
                 if (isPermaThaw) {
                     if (lastThawTicksAny[index] > lastUpdateTime) {
@@ -221,7 +222,8 @@ public class SnowHandler {
             int z = (chunk.zPosition << 4) + (blockPos & 0xf);
 
             BiomeGenBase biome = biomes[blockPos];
-            float temperature = seasonWorldData.season.getAdjustedTemperature(biome.temperature);
+            int y = chunk.getHeightValue(blockPos >> 4, blockPos & 0xf);
+            float temperature = seasonWorldData.season.getAdjustedTemperatureFloat(biome, x, y, z);
             boolean canSnow = temperature <= 0.15;
 
             if (canSnow) {
