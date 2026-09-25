@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.util.WeakHashMap;
 
-import com.seibel.distanthorizons.core.render.renderer.DhTerrainShaderProgram;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockLeavesBase;
 import net.minecraft.init.Blocks;
@@ -13,13 +12,12 @@ import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 
 import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
-import org.lwjgl.opengl.GL32;
 
 @SuppressWarnings("ForLoopReplaceableByForEach")
 public class SnowHandler {
 
     private static final int MAX_SEASON_LENGTH = 10000;
-    private static final int MAX_TICKS_FOR_CHUNK_UPDATE = 2000;
+    private static final int MAX_TICKS_FOR_CHUNK_UPDATE = 1000;
     private static final int MAX_BLOCK_REPEAT = 4;
 
     // Of format [(chunkX % 16) << 4 + (chunkY % 16))] [(blockX % 16) << 4 + (blockY % 16)] []
@@ -254,22 +252,5 @@ public class SnowHandler {
             seasonWorldData.season = seasonWorldData.season.nextSeason();
         }
         seasonWorldData.markDirty();
-    }
-
-    public void uploadDataToDH() {
-        int[] summerWinter = new int[256 *256 * 4];
-        int[] any = new int[256 * 256* 4];
-
-        for (int i = 0; i < 256 * 256 ; i++) {
-            summerWinter[i * 4 + 0] = (int)(seasonWorldData.lastSnowTicksWinter[i] & 0xFFFFFFFFL);
-            summerWinter[i * 4 + 1] = (int)(seasonWorldData.lastSnowTicksWinter[i] >> 32);
-            summerWinter[i * 4 + 2] = (int)(seasonWorldData.lastThawTicksSummer[i] & 0xFFFFFFFFL);
-            summerWinter[i * 4 + 3] = (int)(seasonWorldData.lastThawTicksSummer[i] >> 32);
-            any[i * 4 + 0] = (int)(seasonWorldData.lastSnowTicksAny[i] & 0xFFFFFFFFL);
-            any[i * 4 + 1] = (int)(seasonWorldData.lastSnowTicksAny[i] >> 32);
-            any[i * 4 + 2] = (int)(seasonWorldData.lastThawTicksAny[i] & 0xFFFFFFFFL);
-            any[i * 4 + 3] = (int)(seasonWorldData.lastThawTicksAny[i] >> 32);
-        }
-        DhTerrainShaderProgram.uploadSnowData(summerWinter, any);
     }
 }

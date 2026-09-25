@@ -5,5 +5,4 @@ repositories {
         name = "FalsePattern"
         url = "https://mvn.falsepattern.com/releases/"
     }
-    mavenLocal()
 }
