@@ -31,7 +31,7 @@ public class SeasonWorldData extends WorldSavedData {
         int[] hi = tag.getIntArray(key + "_hi");
         int[] lo = tag.getIntArray(key + "_lo");
         for (int i = 0; i < list.length; i++) {
-            list[i] = ((long) hi[i] << 32) | lo[i];
+            list[i] = ((long) hi[i] << 32) | (lo[i] & 0xFFFFFFFFL);
         }
     }
 
