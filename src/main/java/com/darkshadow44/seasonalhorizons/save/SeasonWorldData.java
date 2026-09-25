@@ -28,8 +28,22 @@ public class SeasonWorldData extends WorldSavedData {
     }
 
     private void readSeasonEventList(long[] list, NBTTagCompound tag, String key) {
+        if (!tag.hasKey(key + "_hi") && !tag.hasKey(key + "_lo")) {
+            // Not saved yet; keep the defaults
+            return;
+        }
         int[] hi = tag.getIntArray(key + "_hi");
         int[] lo = tag.getIntArray(key + "_lo");
+        if (hi.length != list.length || lo.length != list.length) {
+            throw new IllegalStateException(
+                "Invalid season data for " + key
+                    + ": expected "
+                    + list.length
+                    + " entries, got hi="
+                    + hi.length
+                    + ", lo="
+                    + lo.length);
+        }
         for (int i = 0; i < list.length; i++) {
             list[i] = ((long) hi[i] << 32) | (lo[i] & 0xFFFFFFFFL);
         }
