@@ -1,0 +1,58 @@
+# Seasons
+
+- A year consists of four seasons—spring, summer, autumn, and winter—each divided into early, mid, and late subseasons.
+- Each subseason lasts a configurable number of ticks, after which the cycle advances to the next subseason. After late winter, the cycle returns to early spring.
+
+# Coloring
+
+- Each subseason has separate 256×256 color maps for grass and foliage.
+- Grass and foliage colors are selected from the active subseason's maps using the season-adjusted biome temperature and biome rainfall.
+- A subseason change switches to the new color maps immediately and rebuilds all rendered chunks.
+
+Season Snow Logic:
+- Seasonal snow processing applies to the Overworld.
+- Only care for global weather, local weather comes later.
+- Snow behavior distinguishes winter from all other seasons. Winter lowers the temperature by 0.7, and the resulting season-adjusted temperature is clamped to the range -0.5 through 2.0.
+- During global precipitation, snow accumulates where the season- and altitude-adjusted temperature is at or below 0.15. Snow placement follows Minecraft's normal placement rules.
+- Existing snow thaws where the adjusted temperature is above 0.15. Where the temperature is at or below 0.15 without precipitation, the column remains unchanged, so snow does not thaw in permafrost.
+- Snow accumulation and thawing place and remove physical snow-layer blocks rather than using a texture overlay.
+- Snow also accumulates on the ground beneath leaf canopies and thaws there under the same conditions.
+- Note: Temperature gets colder the higher a block is, this is accounted for
+- We divide each column into 3 states: Perma snow, perma thaw and normal, normal snows in winter and thaws in other seasons.
+- Snow/Thaw is tracked by a pseudo random 256x256 block pattern. This pattern is repeated over the entire world.
+- Similarly, each time the "is snowing" state changes we calculate a "schedule" pattern.
+- Each schedule spans a configurable maximum number of ticks. Every column appears four times, distributed pseudo-randomly across the schedule. On each tick, the scheduled columns update their state in the global pattern and in the chunks currently included in Minecraft's active weather-tick set. Other chunks catch up when they are loaded or populated.
+- Each position in the repeating pattern tracks four world-time timestamps:
+    - The latest precipitation tick in any season.
+    - The latest precipitation tick during winter.
+    - The latest thaw-processing tick in any season.
+    - The latest thaw-processing tick outside winter.
+- Each unloaded chunk stores the world time at which it was unloaded.
+- Newly generated chunks catch up with the global snow state after terrain population.
+- When a chunk is loaded or populated, each column catches up by comparing the chunk's stored unload time directly with the relevant timestamps:
+    - Permanent-snow columns use the latest precipitation timestamp from any season.
+    - Permanent-thaw columns use the latest thaw-processing timestamp from any season.
+    - Normal columns compare the latest winter precipitation with the latest non-winter thaw-processing timestamp; the newer event determines whether snow is added or removed.
+    - A column is changed only when the relevant event happened after the chunk's stored unload time.
+
+# Distant Horizons
+
+- Distant Horizons (DH) snow uses the same repeating 256×256 pattern and the same four snow/thaw timestamps as normal terrain.
+- The server synchronizes the timestamp grids to the client when the player connects or changes dimensions. The client keeps them current as snow and thaw processing advances.
+- When DH captures full-resolution terrain, a non-rendered synthetic marker is added above a surface where Minecraft permits snow placement. An existing snow layer serves as both the current snow state and proof that the surface is snowable, so it does not need a separate marker.
+- DH render data retains the snow information needed for each rendered surface:
+    - Whether the source data already contained a snow layer.
+    - Whether a snow layer or synthetic marker identifies the surface as snowable.
+    - Whether the column is permanent snow, permanent thaw, or normal.
+    - The world time when the LOD data last reflected the full-resolution world.
+- The client uploads the timestamp grids to repeating GPU textures. Each LOD surface uses its world position to sample the matching entry.
+- The shader compares the LOD surface's last-update time with the relevant snow and thaw timestamps, using the same catch-up rules as a loaded chunk. Existing snow remains until a newer thaw event removes it, and eligible surfaces gain snow only after a newer applicable precipitation event.
+- Snow is rendered as a visual covering on the affected LOD surface without modifying the stored DH terrain or rebuilding every visible LOD chunk.
+- Because the timestamp pattern advances gradually, distant snow and thaw also advance gradually. Updating the timestamp textures makes the affected LOD surfaces change without maintaining per-chunk snow, thaw, or rebuild queues.
+- Snow metadata must survive DH data conversion and reduction. Render data with snow-sensitive boundaries must not be merged in a way that loses those boundaries.
+
+# With a local weather mod like SimpleClouds:
+
+- We have a global snow logic - we can't snow just where clouds are.
+- Frost accumulates randomly, just slower than when it snows
+- Special effect to show "frost weather" is in effect

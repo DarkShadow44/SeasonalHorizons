@@ -1,0 +1,1515 @@
+From 1391d2648874abd9ed0ca6d5f0e58051135f20d2 Mon Sep 17 00:00:00 2001
+From: Fabian <dark.shadow4@web.de>
+Date: Sat, 26 Sep 2026 00:44:31 +0200
+Subject: [PATCH] DH snow
+
+---
+ .../render/ColumnRenderSource.java            |  21 +-
+ .../render/bufferBuilding/BufferQuad.java     |  12 +-
+ .../render/bufferBuilding/ColumnBox.java      |  44 ++---
+ .../bufferBuilding/ColumnRenderBuffer.java    |   7 +-
+ .../ColumnRenderBufferBuilder.java            |  16 +-
+ .../render/bufferBuilding/LodQuadBuilder.java |  63 +++---
+ .../render/columnViews/ColumnArrayView.java   |  80 ++++----
+ .../render/columnViews/ColumnQuadView.java    |  39 ++--
+ .../render/columnViews/IColumnDataView.java   |   6 +-
+ .../FullDataToRenderDataTransformer.java      | 179 ++++++++++--------
+ .../transformers/LodDataBuilder.java          |   9 +-
+ .../renderer/DhTerrainShaderProgram.java      |  75 +++++++-
+ .../vertexFormat/DefaultLodVertexFormats.java |   8 +-
+ .../core/util/RenderDataPointUtil.java        |   2 +-
+ src/main/resources/shaders/flat_shaded.frag   |   7 +
+ src/main/resources/shaders/standard.vert      |  50 +++++
+ 16 files changed, 402 insertions(+), 216 deletions(-)
+
+diff --git a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/ColumnRenderSource.java b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/ColumnRenderSource.java
+index c107575da..73bc88bbf 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/ColumnRenderSource.java
++++ b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/ColumnRenderSource.java
+@@ -36,6 +36,7 @@ import com.seibel.distanthorizons.core.level.IDhClientLevel;
+ import com.seibel.distanthorizons.coreapi.util.BitShiftUtil;
+ import com.seibel.distanthorizons.core.util.ColorUtil;
+ import com.seibel.distanthorizons.core.util.RenderDataPointUtil;
++import it.unimi.dsi.fastutil.bytes.ByteArrayList;
+ import it.unimi.dsi.fastutil.longs.LongArrayList;
+ import org.apache.logging.log4j.Logger;
+ 
+@@ -65,7 +66,8 @@ public class ColumnRenderSource extends PhantomArrayListParent
+ 	public int yOffset;
+ 	
+ 	public final LongArrayList renderDataContainer;
+-	
++    public final ByteArrayList renderDataContainerAdditional;
++
+ 	public final DebugSourceFlag[] debugSourceFlags;
+ 	
+ 	private boolean isEmpty = true;
+@@ -94,9 +96,13 @@ public class ColumnRenderSource extends PhantomArrayListParent
+ 		this.yOffset = yOffset;
+ 		
+ 		this.verticalDataCount = maxVerticalSize;
++
++
+ 		
+ 		this.renderDataContainer = this.pooledArraysCheckout.getLongArray(0, SECTION_SIZE * SECTION_SIZE * this.verticalDataCount);
+-		
++        this.renderDataContainerAdditional = new ByteArrayList();
++        renderDataContainerAdditional.size(renderDataContainer.size());
++
+ 		this.debugSourceFlags = new DebugSourceFlag[SECTION_SIZE * SECTION_SIZE];
+ 	}
+ 	
+@@ -123,15 +129,14 @@ public class ColumnRenderSource extends PhantomArrayListParent
+ 			return null;
+ 		}
+ 		
+-		return new ColumnArrayView(this.renderDataContainer, this.verticalDataCount,
++
++		return new ColumnArrayView(this.renderDataContainer, renderDataContainerAdditional, this.verticalDataCount,
+ 				offset, this.verticalDataCount);
+ 	}
+-	
++
+ 	public ColumnQuadView getFullQuadView() { return this.getQuadViewOverRange(0, 0, SECTION_SIZE, SECTION_SIZE); }
+-	public ColumnQuadView getQuadViewOverRange(int quadX, int quadZ, int quadXSize, int quadZSize) { return new ColumnQuadView(this.renderDataContainer, SECTION_SIZE, this.verticalDataCount, quadX, quadZ, quadXSize, quadZSize); }
+-	
+-	
+-	
++	public ColumnQuadView getQuadViewOverRange(int quadX, int quadZ, int quadXSize, int quadZSize) { return new ColumnQuadView(this.renderDataContainer, renderDataContainerAdditional, SECTION_SIZE, this.verticalDataCount, quadX, quadZ, quadXSize, quadZSize); }
++
+ 	//=====================//
+ 	// data helper methods //
+ 	//=====================//
+diff --git a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/BufferQuad.java b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/BufferQuad.java
+index bc25248fd..192f87a89 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/BufferQuad.java
++++ b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/BufferQuad.java
+@@ -44,7 +44,9 @@ public final class BufferQuad
+ 	public final short x;
+ 	public final short y;
+ 	public final short z;
+-	
++
++    public final int snowFlags;
++
+ 	public short widthEastWest;
+ 	/** This is both North/South and Up/Down since the merging logic is the same either way */
+ 	public short widthNorthSouthOrUpDown;
+@@ -64,7 +66,7 @@ public final class BufferQuad
+ 	BufferQuad(
+ 			short x, short y, short z, short widthEastWest, short widthNorthSouthOrUpDown,
+ 			int color, byte irisBlockMaterialId, byte skylight, byte blockLight,
+-			EDhDirection direction)
++			EDhDirection direction, int snowFlags)
+ 	{
+ 		if (widthEastWest == 0 || widthNorthSouthOrUpDown == 0)
+ 			throw new IllegalArgumentException("Size 0 quad!");
+@@ -81,6 +83,7 @@ public final class BufferQuad
+ 		this.skyLight = skylight;
+ 		this.blockLight = blockLight;
+ 		this.direction = direction;
++        this.snowFlags = snowFlags;
+ 	}
+ 	
+ 	
+@@ -155,7 +158,10 @@ public final class BufferQuad
+ 		// only merge quads that are in the same direction
+ 		if (this.direction != quad.direction)
+ 			return false;
+-		
++
++        if ((this.snowFlags & 0x3) != 0 || (quad.snowFlags & 0x3) != 0)
++            return false;
++
+ 		// make sure these quads share the same perpendicular axis
+ 		if ((mergeDirection == BufferMergeDirectionEnum.EastWest && this.y != quad.y) ||
+ 				(mergeDirection == BufferMergeDirectionEnum.NorthSouthOrUpDown && this.x != quad.x))
+diff --git a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnBox.java b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnBox.java
+index e68706c1c..dcaa84342 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnBox.java
++++ b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnBox.java
+@@ -67,7 +67,7 @@ public class ColumnBox
+ 			short xSize, short ySize, short zSize,
+ 			short minX, short minY, short minZ,
+ 			int color, byte irisBlockMaterialId, byte skyLight, byte blockLight,
+-			long topData, long bottomData, ColumnArrayView[] adjData, boolean[] isAdjDataSameDetailLevel)
++			long topData, long bottomData, ColumnArrayView[] adjData, boolean[] isAdjDataSameDetailLevel, int snowFlags)
+ 	{
+ 		//================//
+ 		// variable setup //
+@@ -128,13 +128,13 @@ public class ColumnBox
+ 		boolean skipTop = RenderDataPointUtil.doesDataPointExist(topData) && (RenderDataPointUtil.getYMin(topData) == maxY) && !isTopTransparent;
+ 		if (!skipTop)
+ 		{
+-			builder.addQuadUp(minX, maxY, minZ, xSize, zSize, ColorUtil.applyShade(color, MC.getShade(EDhDirection.UP)), irisBlockMaterialId, skyLightTop, blockLight);
++			builder.addQuadUp(minX, maxY, minZ, xSize, zSize, ColorUtil.applyShade(color, MC.getShade(EDhDirection.UP)), irisBlockMaterialId, skyLightTop, blockLight, snowFlags);
+ 		}
+-		
++
+ 		boolean skipBottom = RenderDataPointUtil.doesDataPointExist(bottomData) && (RenderDataPointUtil.getYMax(bottomData) == minY) && !isBottomTransparent;
+ 		if (!skipBottom)
+ 		{
+-			builder.addQuadDown(minX, minY, minZ, xSize, zSize, ColorUtil.applyShade(color, MC.getShade(EDhDirection.DOWN)), irisBlockMaterialId, skyLightBot, blockLight);
++			builder.addQuadDown(minX, minY, minZ, xSize, zSize, ColorUtil.applyShade(color, MC.getShade(EDhDirection.DOWN)), irisBlockMaterialId, skyLightBot, blockLight, snowFlags);
+ 		}
+ 		
+ 		
+@@ -153,13 +153,13 @@ public class ColumnBox
+ 				// Add an adjacent face if this is opaque face or transparent over the void.
+ 				if (!isTransparent || overVoid)
+ 				{
+-					builder.addQuadAdj(EDhDirection.NORTH, minX, minY, minZ, xSize, ySize, color, irisBlockMaterialId, LodUtil.MAX_MC_LIGHT, blockLight);
++					builder.addQuadAdj(EDhDirection.NORTH, minX, minY, minZ, xSize, ySize, color, irisBlockMaterialId, LodUtil.MAX_MC_LIGHT, blockLight, snowFlags);
+ 				}
+ 			}
+ 			else
+ 			{
+ 				makeAdjVerticalQuad(builder, adjCol, adjSameDetailLevel, caveCullingMaxY, EDhDirection.NORTH, minX, minY, minZ, xSize, ySize,
+-						color, irisBlockMaterialId, blockLight);
++						color, irisBlockMaterialId, blockLight, snowFlags);
+ 			}
+ 		}
+ 		
+@@ -171,16 +171,16 @@ public class ColumnBox
+ 			{
+ 				if (!isTransparent || overVoid)
+ 				{
+-					builder.addQuadAdj(EDhDirection.SOUTH, minX, minY, maxZ, xSize, ySize, color, irisBlockMaterialId, LodUtil.MAX_MC_LIGHT, blockLight);
++					builder.addQuadAdj(EDhDirection.SOUTH, minX, minY, maxZ, xSize, ySize, color, irisBlockMaterialId, LodUtil.MAX_MC_LIGHT, blockLight, snowFlags);
+ 				}
+ 			}
+ 			else
+ 			{
+ 				makeAdjVerticalQuad(builder, adjCol, adjSameDetailLevel, caveCullingMaxY, EDhDirection.SOUTH, minX, minY, maxZ, xSize, ySize,
+-						color, irisBlockMaterialId, blockLight);
++						color, irisBlockMaterialId, blockLight, snowFlags);
+ 			}
+ 		}
+-		
++
+ 		// WEST face
+ 		{
+ 			ColumnArrayView adjCol = adjData[EDhDirection.WEST.ordinal() - 2];
+@@ -189,13 +189,13 @@ public class ColumnBox
+ 			{
+ 				if (!isTransparent || overVoid)
+ 				{
+-					builder.addQuadAdj(EDhDirection.WEST, minX, minY, minZ, zSize, ySize, color, irisBlockMaterialId, LodUtil.MAX_MC_LIGHT, blockLight);
++					builder.addQuadAdj(EDhDirection.WEST, minX, minY, minZ, zSize, ySize, color, irisBlockMaterialId, LodUtil.MAX_MC_LIGHT, blockLight, snowFlags);
+ 				}
+ 			}
+ 			else
+ 			{
+ 				makeAdjVerticalQuad(builder, adjCol, adjSameDetailLevel, caveCullingMaxY, EDhDirection.WEST, minX, minY, minZ, zSize, ySize,
+-						color, irisBlockMaterialId, blockLight);
++						color, irisBlockMaterialId, blockLight, snowFlags);
+ 			}
+ 		}
+ 		
+@@ -207,21 +207,21 @@ public class ColumnBox
+ 			{
+ 				if (!isTransparent || overVoid)
+ 				{
+-					builder.addQuadAdj(EDhDirection.EAST, maxX, minY, minZ, zSize, ySize, color, irisBlockMaterialId, LodUtil.MAX_MC_LIGHT, blockLight);
++					builder.addQuadAdj(EDhDirection.EAST, maxX, minY, minZ, zSize, ySize, color, irisBlockMaterialId, LodUtil.MAX_MC_LIGHT, blockLight, snowFlags);
+ 				}
+ 			}
+ 			else
+ 			{
+ 				makeAdjVerticalQuad(builder, adjCol, adjSameDetailLevel, caveCullingMaxY, EDhDirection.EAST, maxX, minY, minZ, zSize, ySize,
+-						color, irisBlockMaterialId, blockLight);
++						color, irisBlockMaterialId, blockLight, snowFlags);
+ 			}
+ 		}
+ 	}
+-	
++
+ 	private static void makeAdjVerticalQuad(
+-			LodQuadBuilder builder, @NotNull ColumnArrayView adjColumnView, boolean adjacentIsSameDetailLevel, int caveCullingMaxY, EDhDirection direction, 
++			LodQuadBuilder builder, @NotNull ColumnArrayView adjColumnView, boolean adjacentIsSameDetailLevel, int caveCullingMaxY, EDhDirection direction,
+ 			short x, short yMin, short z, short horizontalWidth, short ySize,
+-			int color, byte irisBlockMaterialId, byte blockLight)
++			int color, byte irisBlockMaterialId, byte blockLight, int snowFlags)
+ 	{
+ 		//==================//
+ 		// create face with //
+@@ -234,8 +234,8 @@ public class ColumnBox
+ 		// just add the full vertical quad
+ 		if (adjColumnView.size == 0 || RenderDataPointUtil.isVoid(adjColumnView.get(0)))
+ 		{
+-			
+-			builder.addQuadAdj(direction, x, yMin, z, horizontalWidth, ySize, color, irisBlockMaterialId, LodUtil.MAX_MC_LIGHT, blockLight);
++
++			builder.addQuadAdj(direction, x, yMin, z, horizontalWidth, ySize, color, irisBlockMaterialId, LodUtil.MAX_MC_LIGHT, blockLight, snowFlags);
+ 			return;
+ 		}
+ 		
+@@ -369,7 +369,7 @@ public class ColumnBox
+ 							builder, direction,
+ 							x, z, horizontalWidth,
+ 							color, irisBlockMaterialId, blockLight,
+-							lastSkyLight, inputTransparent, quadTopY, quadBottomY
++							lastSkyLight, inputTransparent, quadTopY, quadBottomY, snowFlags
+ 					);
+ 					
+ 					lastSkyLight = skyLight;
+@@ -386,7 +386,7 @@ public class ColumnBox
+ 						builder, direction,
+ 						x, z, horizontalWidth,
+ 						color, irisBlockMaterialId, blockLight,
+-						lastSkyLight, inputTransparent, quadTopY, quadBottomY
++						lastSkyLight, inputTransparent, quadTopY, quadBottomY, snowFlags
+ 				);
+ 			}
+ 		}
+@@ -401,7 +401,7 @@ public class ColumnBox
+ 			LodQuadBuilder builder, EDhDirection direction,
+ 			short x, short z, short horizontalWidth,
+ 			int color, byte irisBlockMaterialId, byte blockLight,
+-			byte lastSkyLight, boolean inputTransparent, int quadTopY, int quadBottomY
++			byte lastSkyLight, boolean inputTransparent, int quadTopY, int quadBottomY, int snowFlags
+ 			)
+ 	{
+ 		// invalid positions will have a negative skylight
+@@ -417,7 +417,7 @@ public class ColumnBox
+ 				short height = (short) (quadTopY - quadBottomY);
+ 				if (height > 0)
+ 				{
+-					builder.addQuadAdj(direction, x, (short) quadBottomY, z, horizontalWidth, height, color, irisBlockMaterialId, lastSkyLight, blockLight);
++					builder.addQuadAdj(direction, x, (short) quadBottomY, z, horizontalWidth, height, color, irisBlockMaterialId, lastSkyLight, blockLight, snowFlags);
+ 				}
+ 			}
+ 		}
+diff --git a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnRenderBuffer.java b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnRenderBuffer.java
+index c0dd46277..a8f52b982 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnRenderBuffer.java
++++ b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnRenderBuffer.java
+@@ -98,10 +98,11 @@ public class ColumnRenderBuffer implements AutoCloseable
+ 		
+ 		
+ 		
++
+ 		// make the buffers
+-		ArrayList<ByteBuffer> opaqueBuffers = builder.makeOpaqueVertexBuffers();
+-		ArrayList<ByteBuffer> transparentBuffers = builder.makeTransparentVertexBuffers();
+-		
++		ArrayList<ByteBuffer> opaqueBuffers = builder.makeOpaqueVertexBuffers(blockPos);
++		ArrayList<ByteBuffer> transparentBuffers = builder.makeTransparentVertexBuffers(blockPos);
++
+ 		this.vbos = resizeBuffer(this.vbos, opaqueBuffers.size());
+ 		this.vbosTransparent = resizeBuffer(this.vbosTransparent, transparentBuffers.size());
+ 		
+diff --git a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnRenderBufferBuilder.java b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnRenderBufferBuilder.java
+index 8d3afdc8d..51e5e0d66 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnRenderBufferBuilder.java
++++ b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/ColumnRenderBufferBuilder.java
+@@ -261,8 +261,10 @@ public class ColumnRenderBufferBuilder
+ 							continue;
+ 						}
+ 					}
++
+ 					
+ 					long data = columnRenderData.get(i);
++                    byte snowFlags = columnRenderData.getAdditional(i);
+ 					// If the data is not render-able (Void or non-existing) we stop since there is
+ 					// no data left in this position
+ 					if (RenderDataPointUtil.isVoid(data) || !RenderDataPointUtil.doesDataPointExist(data))
+@@ -275,10 +277,10 @@ public class ColumnRenderBufferBuilder
+ 					
+ 					addLodToBuffer(
+ 							clientLevel,
+-							data, topDataPoint, bottomDataPoint, 
++							data, topDataPoint, bottomDataPoint,
+ 							adjColumnViews, isSameDetailLevel,
+-							thisDetailLevel, relX, relZ, 
+-							quadBuilder, debugSourceFlag);
++							thisDetailLevel, relX, relZ,
++							quadBuilder, debugSourceFlag, snowFlags);
+ 				}
+ 				
+ 			}// for z
+@@ -288,10 +290,10 @@ public class ColumnRenderBufferBuilder
+ 	}
+ 	private static void addLodToBuffer(
+ 			IDhClientLevel clientLevel,
+-			long data, long topData, long bottomData, 
++			long data, long topData, long bottomData,
+ 			ColumnArrayView[] adjColumnViews, boolean[] isSameDetailLevel,
+-			byte detailLevel, int renderSourceOffsetPosX, int renderSourceOffsetPosZ, 
+-			LodQuadBuilder quadBuilder, ColumnRenderSource.DebugSourceFlag debugSource)
++			byte detailLevel, int renderSourceOffsetPosX, int renderSourceOffsetPosZ,
++			LodQuadBuilder quadBuilder, ColumnRenderSource.DebugSourceFlag debugSource, int snowFlags)
+ 	{
+ 		long sectionPos = DhSectionPos.encode(detailLevel, renderSourceOffsetPosX, renderSourceOffsetPosZ);
+ 		
+@@ -426,7 +428,7 @@ public class ColumnRenderBufferBuilder
+ 				blockMaterialId,
+ 				RenderDataPointUtil.getLightSky(data),
+ 				fullBright ? 15 : RenderDataPointUtil.getLightBlock(data),
+-				topData, bottomData, adjColumnViews, isSameDetailLevel);
++				topData, bottomData, adjColumnViews, isSameDetailLevel, snowFlags);
+ 	}
+ 	
+ }
+diff --git a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/LodQuadBuilder.java b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/LodQuadBuilder.java
+index b068086f1..7eeee8168 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/LodQuadBuilder.java
++++ b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/bufferBuilding/LodQuadBuilder.java
+@@ -31,6 +31,7 @@ import com.seibel.distanthorizons.core.config.Config;
+ import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
+ import com.seibel.distanthorizons.core.enums.EDhDirection;
+ import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
++import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPos;
+ import com.seibel.distanthorizons.core.render.glObject.buffer.GLVertexBuffer;
+ import com.seibel.distanthorizons.core.util.ColorUtil;
+ import com.seibel.distanthorizons.api.enums.config.EDhApiGpuUploadMethod;
+@@ -145,14 +146,14 @@ public class LodQuadBuilder
+ 	public void addQuadAdj(
+ 			EDhDirection dir, short x, short y, short z,
+ 			short widthEastWest, short widthNorthSouthOrUpDown,
+-			int color, byte irisBlockMaterialId, byte skyLight, byte blockLight)
++			int color, byte irisBlockMaterialId, byte skyLight, byte blockLight, int snowFlags)
+ 	{
+ 		if (dir == EDhDirection.DOWN)
+ 		{
+ 			throw new IllegalArgumentException("addQuadAdj() is only for adj direction! Not UP or Down!");
+ 		}
+-		
+-		BufferQuad quad = new BufferQuad(x, y, z, widthEastWest, widthNorthSouthOrUpDown, color, irisBlockMaterialId, skyLight, blockLight, dir);
++
++		BufferQuad quad = new BufferQuad(x, y, z, widthEastWest, widthNorthSouthOrUpDown, color, irisBlockMaterialId, skyLight, blockLight, dir, snowFlags);
+ 		ArrayList<BufferQuad> quadList = (this.doTransparency && ColorUtil.getAlpha(color) < 255) ? this.transparentQuads[dir.ordinal()] : this.opaqueQuads[dir.ordinal()];
+ 		if (!quadList.isEmpty() &&
+ 				(
+@@ -168,9 +169,9 @@ public class LodQuadBuilder
+ 	}
+ 	
+ 	// XZ
+-	public void addQuadUp(short minX, short maxY, short minZ, short widthEastWest, short widthNorthSouthOrUpDown, int color, byte irisBlockMaterialId, byte skylight, byte blocklight) // TODO argument names are wrong
++	public void addQuadUp(short minX, short maxY, short minZ, short widthEastWest, short widthNorthSouthOrUpDown, int color, byte irisBlockMaterialId, byte skylight, byte blocklight, int snowFlags) // TODO argument names are wrong
+ 	{
+-		BufferQuad quad = new BufferQuad(minX, maxY, minZ, widthEastWest, widthNorthSouthOrUpDown, color, irisBlockMaterialId, skylight, blocklight, EDhDirection.UP);
++		BufferQuad quad = new BufferQuad(minX, maxY, minZ, widthEastWest, widthNorthSouthOrUpDown, color, irisBlockMaterialId, skylight, blocklight, EDhDirection.UP, snowFlags);
+ 		boolean isTransparent = (this.doTransparency && ColorUtil.getAlpha(color) < 255);
+ 		ArrayList<BufferQuad> quadList = isTransparent ? this.transparentQuads[EDhDirection.UP.ordinal()] : this.opaqueQuads[EDhDirection.UP.ordinal()];
+ 		
+@@ -188,10 +189,10 @@ public class LodQuadBuilder
+ 		
+ 		quadList.add(quad);
+ 	}
+-	
+-	public void addQuadDown(short x, short y, short z, short width, short wz, int color, byte irisBlockMaterialId, byte skylight, byte blocklight)
++
++	public void addQuadDown(short x, short y, short z, short width, short wz, int color, byte irisBlockMaterialId, byte skylight, byte blocklight, int snowFlags)
+ 	{
+-		BufferQuad quad = new BufferQuad(x, y, z, width, wz, color, irisBlockMaterialId, skylight, blocklight, EDhDirection.DOWN);
++		BufferQuad quad = new BufferQuad(x, y, z, width, wz, color, irisBlockMaterialId, skylight, blocklight, EDhDirection.DOWN, snowFlags);
+ 		ArrayList<BufferQuad> qs = (doTransparency && ColorUtil.getAlpha(color) < 255)
+ 				? transparentQuads[EDhDirection.DOWN.ordinal()] : opaqueQuads[EDhDirection.DOWN.ordinal()];
+ 		if (!qs.isEmpty()
+@@ -283,10 +284,10 @@ public class LodQuadBuilder
+ 	//==============//
+ 	// buffer setup //
+ 	//==============//
+-	
+-	public ArrayList<ByteBuffer> makeOpaqueVertexBuffers() { return this.makeVertexBuffers(this.opaqueQuads); }
+-	public ArrayList<ByteBuffer> makeTransparentVertexBuffers() { return this.makeVertexBuffers(this.transparentQuads); }
+-	private ArrayList<ByteBuffer> makeVertexBuffers(ArrayList<BufferQuad>[] quadList)
++
++	public ArrayList<ByteBuffer> makeOpaqueVertexBuffers(DhBlockPos blockPos) { return this.makeVertexBuffers(this.opaqueQuads, blockPos); }
++	public ArrayList<ByteBuffer> makeTransparentVertexBuffers(DhBlockPos blockPos) { return this.makeVertexBuffers(this.transparentQuads, blockPos); }
++	private ArrayList<ByteBuffer> makeVertexBuffers(ArrayList<BufferQuad>[] quadList, DhBlockPos blockPos)
+ 	{
+ 		ArrayList<ByteBuffer> byteBufferList = new ArrayList<>(3);
+ 		
+@@ -309,8 +310,8 @@ public class LodQuadBuilder
+ 					buffer = MemoryUtil.memAlloc(ColumnRenderBuffer.FULL_SIZED_BUFFER);
+ 					byteBufferList.add(buffer);
+ 				}
+-				
+-				this.putQuad(buffer, quadList[directionIndex].get(quadIndex));
++
++				this.putQuad(buffer, quadList[directionIndex].get(quadIndex), blockPos);
+ 			}
+ 		}
+ 		
+@@ -324,7 +325,7 @@ public class LodQuadBuilder
+ 		
+ 		return byteBufferList;
+ 	}
+-	private void putQuad(ByteBuffer bb, BufferQuad quad)
++	private void putQuad(ByteBuffer bb, BufferQuad quad, DhBlockPos blockPos)
+ 	{
+ 		int[][] quadBase = DIRECTION_VERTEX_IBO_QUAD[quad.direction.ordinal()];
+ 		short widthEastWest = quad.widthEastWest;
+@@ -395,18 +396,20 @@ public class LodQuadBuilder
+ 					}
+ 				}
+ 			}
+-			
+-			
++
+ 			this.putVertex(bb, (short) (quad.x + dx), (short) (quad.y + dy), (short) (quad.z + dz),
+ 					quad.hasError ? ColorUtil.RED : color,
+ 					quad.hasError ? 0 : normalIndex,
+ 					quad.hasError ? 0 : quad.irisBlockMaterialId,
+ 					quad.hasError ? 15 : quad.skyLight,
+ 					quad.hasError ? 15 : quad.blockLight,
+-					mx, my, mz);
++					mx, my, mz,
++                blockPos.getX() + quad.x, blockPos.getZ() + quad.z,
++                0,
++                quad.snowFlags);
+ 		}
+ 	}
+-	private void putVertex(ByteBuffer bb, short x, short y, short z, int color, byte normalIndex, byte irisBlockMaterialId, byte skylight, byte blocklight, int mx, int my, int mz)
++	private void putVertex(ByteBuffer bb, short x, short y, short z, int color, byte normalIndex, byte irisBlockMaterialId, byte skylight, byte blocklight, int mx, int my, int mz, int quadX, int quadZ, long lastTimeUpdate, int snowFlags)
+ 	{
+ 		skylight %= 16;
+ 		blocklight %= 16;
+@@ -437,11 +440,23 @@ public class LodQuadBuilder
+ 		bb.put(g);
+ 		bb.put(b);
+ 		bb.put(a);
+-		
+-		// Block ID and normal index are used by the Iris format
+-		bb.put(irisBlockMaterialId);
+-		bb.put(normalIndex);
+-		bb.putShort((short) 0); // padding to make sure the vertex format as a whole is a multiple of 4
++
++        // Snow
++        bb.putInt((int)(lastTimeUpdate & 0xFFFFFFFFL));
++        bb.putInt((int)(lastTimeUpdate >> 32));
++
++        quadX = quadX % 256;
++        if (quadX < 0) {
++            quadX += 256;
++        }
++        quadZ = quadZ % 256;
++        if (quadZ < 0) {
++            quadZ += 256;
++        }
++        bb.put((byte)quadX);
++        bb.put((byte)snowFlags);
++        bb.put((byte)quadZ);
++        bb.put((byte)0);
+ 	}
+ 	
+ 	
+diff --git a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/ColumnArrayView.java b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/ColumnArrayView.java
+index 6371db4ac..e7b52225e 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/ColumnArrayView.java
++++ b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/ColumnArrayView.java
+@@ -22,6 +22,8 @@ package com.seibel.distanthorizons.core.dataObjects.render.columnViews;
+ 
+ import com.seibel.distanthorizons.core.dataObjects.render.ColumnRenderSource;
+ import com.seibel.distanthorizons.core.util.RenderDataPointUtil;
++import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
++import it.unimi.dsi.fastutil.bytes.ByteArrayList;
+ import it.unimi.dsi.fastutil.longs.LongArrayList;
+ 
+ import java.util.Arrays;
+@@ -30,8 +32,9 @@ import java.util.ConcurrentModificationException;
+ public final class ColumnArrayView implements IColumnDataView
+ {
+ 	public final LongArrayList data;
+-	
+-	/** 
++    public final ByteArrayList dataAdditional;
++
++	/**
+ 	 * How many data points are currently being represented by this view. <br>
+ 	 * Will be equal to or less than {@link ColumnArrayView#verticalSize}.
+ 	 */
+@@ -55,9 +58,10 @@ public final class ColumnArrayView implements IColumnDataView
+ 	//=============//
+ 	
+ 	/** @throws IllegalArgumentException if the offset is greater than the data's size */
+-	public ColumnArrayView(LongArrayList data, int size, int offset, int verticalSize) throws IllegalArgumentException
++	public ColumnArrayView(LongArrayList data, ByteArrayList dataAdditional, int size, int offset, int verticalSize) throws IllegalArgumentException
+ 	{
+ 		this.data = data;
++        this.dataAdditional = dataAdditional;
+ 		this.size = size;
+ 		this.offset = offset;
+ 		this.verticalSize = verticalSize;
+@@ -75,38 +79,45 @@ public final class ColumnArrayView implements IColumnDataView
+ 	//=====================//
+ 	
+ 	@Override
+-	public long get(int index) 
+-	{
+-		try
+-		{
+-			return this.data.getLong(index + this.offset);
+-		}
+-		catch (IndexOutOfBoundsException e)
+-		{
+-			// we can fairly confidently say this is a concurrent exception over an actual
+-			// index out of bounds, since we're generally iterating over the whole
+-			// array any time we use this getter.
+-			throw new ConcurrentModificationException("Potential concurrent modification detected. Make sure the parent ColumnRenderSource isn't being closed before the ColumnArrayView processing is complete.", e);
+-		}
+-	}
+-	public void set(int index, long value) { data.set(index + offset, value); }
+-	
++    public long get(int index)
++    {
++        try
++        {
++            return this.data.getLong(index + this.offset);
++        }
++        catch (IndexOutOfBoundsException e)
++        {
++            // we can fairly confidently say this is a concurrent exception over an actual
++            // index out of bounds, since we're generally iterating over the whole
++            // array any time we use this getter.
++            throw new ConcurrentModificationException("Potential concurrent modification detected. Make sure the parent ColumnRenderSource isn't being closed before the ColumnArrayView processing is complete.", e);
++        }
++    }
++    public byte getAdditional(int index)
++    {
++        return this.dataAdditional.getByte(index + this.offset);
++    }
++    public void set(int index, long value) { data.set(index + offset, value); }
++
++    public void setAdditional(int index, byte value) { dataAdditional.set(index + offset, value); }
++
+ 	@Override
+ 	public int size() { return size; }
+ 	@Override
+ 	public int verticalSize() { return verticalSize; }
+-	
++
+ 	@Override
+ 	public int dataCount() { return (this.verticalSize != 0) ? (this.size / this.verticalSize) : 0; } // TODO what does the divide by mean?
+-	
++
+ 	@Override
+ 	public ColumnArrayView subView(int dataIndexStart, int dataCount)
+ 	{
+-		return new ColumnArrayView(data, dataCount * verticalSize, offset + dataIndexStart * verticalSize, verticalSize);
++		return new ColumnArrayView(data, dataAdditional, dataCount * verticalSize, offset + dataIndexStart * verticalSize, verticalSize);
+ 	}
+-	
+-	public void fill(long value) { Arrays.fill(data.elements(), offset, offset + size, value); }
+-	
++
++	public void fill(long value, byte valueAdditional) { Arrays.fill(data.elements(), offset, offset + size, value);
++        Arrays.fill(dataAdditional.elements(), offset, offset + size, valueAdditional);}
++
+ 	public void copyFrom(IColumnDataView source) { copyFrom(source, 0); }
+ 	public void copyFrom(IColumnDataView source, int outputDataIndexOffset)
+ 	{
+@@ -123,20 +134,25 @@ public final class ColumnArrayView implements IColumnDataView
+ 			for (int i = 0; i < source.dataCount(); i++)
+ 			{
+ 				int outputOffset = offset + outputDataIndexOffset * verticalSize + i * verticalSize;
+-				source.subView(i, 1).copyTo(data.elements(), outputOffset, source.verticalSize());
+-				Arrays.fill(data.elements(), outputOffset + source.verticalSize(),
+-						outputOffset + verticalSize, 0);
++				source.subView(i, 1).copyTo(data.elements(), dataAdditional.elements(), outputOffset, source.verticalSize());
++                Arrays.fill(data.elements(), outputOffset + source.verticalSize(),
++                    outputOffset + verticalSize, 0);
++                Arrays.fill(dataAdditional.elements(), outputOffset + source.verticalSize(),
++                    outputOffset + verticalSize, (byte)0);
+ 			}
+ 		}
+ 		else
+ 		{
+-			source.copyTo(data.elements(), offset + outputDataIndexOffset * verticalSize, source.size());
++			source.copyTo(data.elements(), dataAdditional.elements(), offset + outputDataIndexOffset * verticalSize, source.size());
+ 		}
+ 	}
+-	
++
+ 	@Override
+-	public void copyTo(long[] target, int offset, int size) { System.arraycopy(data.elements(), this.offset, target, offset, size); }
+-	
++	public void copyTo(long[] target, byte[] targetAdditional, int offset, int size) {
++        System.arraycopy(data.elements(), this.offset, target, offset, size);
++        System.arraycopy(dataAdditional.elements(), this.offset, targetAdditional, offset, size);
++    }
++
+ 	public boolean mergeWith(ColumnArrayView source, boolean override)
+ 	{
+ 		if (size != source.size)
+diff --git a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/ColumnQuadView.java b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/ColumnQuadView.java
+index d0a62b469..d3990b94d 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/ColumnQuadView.java
++++ b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/ColumnQuadView.java
+@@ -19,34 +19,38 @@
+ 
+ package com.seibel.distanthorizons.core.dataObjects.render.columnViews;
+ 
++import it.unimi.dsi.fastutil.bytes.ByteArrayList;
+ import it.unimi.dsi.fastutil.longs.LongArrayList;
+ 
+ public class ColumnQuadView implements IColumnDataView
+ {
+ 	private final LongArrayList data;
++    private final ByteArrayList dataAdditional;
+ 	private final int perColumnOffset; // per column (of columns of data) offset in longs
+ 	private final int xSize; // x size in datapoints
+ 	private final int zSize; // x size in datapoints
+ 	private final int offset; // offset in longs
+ 	private final int vertSize; // vertical size in longs
+-	
+-	public ColumnQuadView(LongArrayList data, int dataZWidth, int dataVertSize, int viewXOffset, int viewZOffset, int xSize, int zSize)
++
++	public ColumnQuadView(LongArrayList data, ByteArrayList dataAdditional, int dataZWidth, int dataVertSize, int viewXOffset, int viewZOffset, int xSize, int zSize)
+ 	{
+ 		if (viewXOffset + xSize > (data.size() / (dataZWidth * dataVertSize)) || viewZOffset + zSize > dataZWidth)
+ 		{
+ 			throw new IllegalArgumentException("View is out of bounds");
+ 		}
+-		
++
+ 		this.data = data;
++        this.dataAdditional = dataAdditional;
+ 		this.xSize = xSize;
+ 		this.zSize = zSize;
+ 		this.vertSize = dataVertSize;
+ 		this.perColumnOffset = dataZWidth * dataVertSize;
+ 		this.offset = viewXOffset * perColumnOffset + viewZOffset * dataVertSize;
+ 	}
+-	private ColumnQuadView(LongArrayList data, int perColumnOffset, int offset, int vertSize, int xSize, int zSize)
++	private ColumnQuadView(LongArrayList data, ByteArrayList dataAdditional, int perColumnOffset, int offset, int vertSize, int xSize, int zSize)
+ 	{
+ 		this.data = data;
++        this.dataAdditional = dataAdditional;
+ 		this.perColumnOffset = perColumnOffset;
+ 		this.offset = offset;
+ 		this.vertSize = vertSize;
+@@ -75,21 +79,20 @@ public class ColumnQuadView implements IColumnDataView
+ 	
+ 	public ColumnArrayView get(int x, int z)
+ 	{
+-		return new ColumnArrayView(data, vertSize, offset + x * perColumnOffset + z * vertSize, vertSize);
++		return new ColumnArrayView(data, dataAdditional, vertSize, offset + x * perColumnOffset + z * vertSize, vertSize);
+ 	}
+-	
++
+ 	public ColumnArrayView getRow(int x)
+ 	{
+-		return new ColumnArrayView(data, zSize * vertSize, offset + x * perColumnOffset, vertSize);
++		return new ColumnArrayView(data, dataAdditional, zSize * vertSize, offset + x * perColumnOffset, vertSize);
+ 	}
+-	
++
+ 	public void set(int x, int z, IColumnDataView singleColumn)
+ 	{
+ 		if (singleColumn.verticalSize() != vertSize) throw new IllegalArgumentException("Vertical size of singleColumn must be equal to vertSize");
+ 		if (singleColumn.dataCount() != 1) throw new IllegalArgumentException("SingleColumn must contain exactly one data point");
+-		singleColumn.copyTo(data.elements(), offset + x * perColumnOffset + z * vertSize, singleColumn.size());
++		singleColumn.copyTo(data.elements(), dataAdditional.elements(), offset + x * perColumnOffset + z * vertSize, singleColumn.size());
+ 	}
+-	
+ 	@Override
+ 	public int size()
+ 	{
+@@ -114,28 +117,30 @@ public class ColumnQuadView implements IColumnDataView
+ 		if (dataCount != 1) throw new UnsupportedOperationException("Fixme: subView for QUadView only support one data point!");
+ 		int x = dataIndexStart / xSize;
+ 		int z = dataIndexStart % xSize;
+-		return new ColumnArrayView(data, vertSize * dataCount, offset + x * perColumnOffset + z * vertSize, vertSize);
++		return new ColumnArrayView(data, dataAdditional, vertSize * dataCount, offset + x * perColumnOffset + z * vertSize, vertSize);
+ 	}
+-	
++
+ 	public ColumnQuadView subView(int xOffset, int zOffset, int xSize, int zSize)
+ 	{
+ 		if (xOffset + xSize > this.xSize || zOffset + zSize > this.zSize) throw new IllegalArgumentException("SubView is out of bounds");
+-		return new ColumnQuadView(data, perColumnOffset, offset + xOffset * perColumnOffset + zOffset * vertSize, vertSize, xSize, zSize);
++		return new ColumnQuadView(data, dataAdditional, perColumnOffset, offset + xOffset * perColumnOffset + zOffset * vertSize, vertSize, xSize, zSize);
+ 	}
+-	
++
+ 	@Override
+-	public void copyTo(long[] target, int offset, int size)
++	public void copyTo(long[] target, byte[] targetAddional, int offset, int size)
+ 	{
+ 		if (size != this.size() && size > zSize * vertSize) throw new UnsupportedOperationException("Not supported yet");
+ 		if (size <= xSize * vertSize)
+ 		{
+-			System.arraycopy(data, this.offset, target, offset, size);
++            System.arraycopy(data, this.offset, target, offset, size);
++            System.arraycopy(dataAdditional, this.offset, targetAddional, offset, size);
+ 		}
+ 		else
+ 		{
+ 			for (int x = 0; x < xSize; x++)
+ 			{
+-				System.arraycopy(data, this.offset + x * perColumnOffset, target, offset + x * xSize * vertSize, xSize * vertSize);
++                System.arraycopy(data, this.offset + x * perColumnOffset, target, offset + x * xSize * vertSize, xSize * vertSize);
++                System.arraycopy(dataAdditional, this.offset + x * perColumnOffset, targetAddional, offset + x * xSize * vertSize, xSize * vertSize);
+ 			}
+ 		}
+ 	}
+diff --git a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/IColumnDataView.java b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/IColumnDataView.java
+index d92a6aa72..db9f698a7 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/IColumnDataView.java
++++ b/src/main/java/com/seibel/distanthorizons/core/dataObjects/render/columnViews/IColumnDataView.java
+@@ -53,7 +53,7 @@ public interface IColumnDataView
+ 	int dataCount();
+ 	
+ 	IColumnDataView subView(int dataIndexStart, int dataCount);
+-	
+-	void copyTo(long[] target, int offset, int count);
+-	
++
++	void copyTo(long[] target, byte[] targetAdditional, int offset, int count);
++
+ }
+diff --git a/src/main/java/com/seibel/distanthorizons/core/dataObjects/transformers/FullDataToRenderDataTransformer.java b/src/main/java/com/seibel/distanthorizons/core/dataObjects/transformers/FullDataToRenderDataTransformer.java
+index b56add576..a905bfe43 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/dataObjects/transformers/FullDataToRenderDataTransformer.java
++++ b/src/main/java/com/seibel/distanthorizons/core/dataObjects/transformers/FullDataToRenderDataTransformer.java
+@@ -20,6 +20,7 @@
+ package com.seibel.distanthorizons.core.dataObjects.transformers;
+ 
+ import com.seibel.distanthorizons.api.enums.config.EDhApiBlocksToAvoid;
++import com.seibel.distanthorizons.common.wrappers.block.FakeBlockState;
+ import com.seibel.distanthorizons.core.config.Config;
+ import com.seibel.distanthorizons.core.dataObjects.fullData.FullDataPointIdMap;
+ import com.seibel.distanthorizons.core.dataObjects.fullData.sources.FullDataSourceV2;
+@@ -38,8 +39,11 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftCli
+ import com.seibel.distanthorizons.core.wrapperInterfaces.world.IBiomeWrapper;
+ import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
+ import com.seibel.distanthorizons.coreapi.util.BitShiftUtil;
++import it.unimi.dsi.fastutil.bytes.ByteArrayList;
+ import it.unimi.dsi.fastutil.longs.LongArrayList;
+ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
++import net.minecraft.init.Blocks;
++import net.minecraft.world.biome.BiomeGenBase;
+ import org.apache.logging.log4j.Logger;
+ import org.jetbrains.annotations.Nullable;
+ 
+@@ -51,20 +55,20 @@ import java.util.HashSet;
+ public class FullDataToRenderDataTransformer
+ {
+ 	private static final Logger LOGGER = DhLoggerBuilder.getLogger();
+-	
++
+ 	private static final IWrapperFactory WRAPPER_FACTORY = SingletonInjector.INSTANCE.get(IWrapperFactory.class);
+ 	private static final IMinecraftClientWrapper MC = SingletonInjector.INSTANCE.get(IMinecraftClientWrapper.class);
+-	
++
+ 	private static final LongOpenHashSet brokenPos = new LongOpenHashSet();
+-	
++
+ 	public static final PhantomArrayListPool ARRAY_LIST_POOL = new PhantomArrayListPool("Data Transformer");
+-	
+-	
+-	
++
++
++
+ 	//==============================//
+ 	// public transformer interface //
+ 	//==============================//
+-	
++
+ 	@Nullable
+ 	public static ColumnRenderSource transformFullDataToRenderSource(@Nullable FullDataSourceV2 fullDataSource, @Nullable IClientLevelWrapper levelWrapper)
+ 	{
+@@ -74,11 +78,11 @@ public class FullDataToRenderDataTransformer
+ 		}
+ 		else if (levelWrapper == null)
+ 		{
+-			// if the client is no longer loaded in the world, render sources cannot be created 
++			// if the client is no longer loaded in the world, render sources cannot be created
+ 			return null;
+ 		}
+-		
+-		
++
++
+ 		try
+ 		{
+ 			return transformCompleteFullDataToColumnData(levelWrapper, fullDataSource);
+@@ -88,13 +92,13 @@ public class FullDataToRenderDataTransformer
+ 			return null;
+ 		}
+ 	}
+-	
+-	
+-	
++
++
++
+ 	//==============//
+ 	// transformers //
+ 	//==============//
+-	
++
+ 	/**
+ 	 * Creates a LodNode for a chunk in the given world.
+ 	 *
+@@ -106,48 +110,48 @@ public class FullDataToRenderDataTransformer
+ 	{
+  		final long pos = fullDataSource.getPos();
+ 		final byte dataDetail = fullDataSource.getDataDetailLevel();
+-		
++
+ 		final int vertSize = Config.Client.Advanced.Graphics.Quality.verticalQuality.get().calculateMaxVerticalData(fullDataSource.getDataDetailLevel());
+-		
+-		
+-		
++
++
++
+ 		final ColumnRenderSource columnSource = ColumnRenderSource.createEmpty(pos, vertSize, levelWrapper.getMinHeight());
+ 		if (fullDataSource.isEmpty)
+ 		{
+ 			return columnSource;
+ 		}
+-		
++
+ 		columnSource.markNotEmpty();
+ 		int baseX = DhSectionPos.getMinCornerBlockX(pos);
+ 		int baseZ = DhSectionPos.getMinCornerBlockZ(pos);
+-		
++
+ 		for (int x = 0; x < FullDataSourceV2.WIDTH; x++)
+ 		{
+ 			for (int z = 0; z < FullDataSourceV2.WIDTH; z++)
+ 			{
+ 				throwIfThreadInterrupted();
+-				
++
+ 				ColumnArrayView columnArrayView = columnSource.getVerticalDataPointView(x, z);
+ 				LongArrayList dataColumn = fullDataSource.get(x, z);
+-				
++
+ 				updateOrReplaceRenderDataViewColumnWithFullDataColumn(
+-						levelWrapper, fullDataSource.mapping, 
++						levelWrapper, fullDataSource.mapping,
+ 						// bitshift is to account for LODs with a detail level greater than 0 so the block pos is correct
+-						baseX + BitShiftUtil.pow(x,dataDetail), baseZ + BitShiftUtil.pow(z,dataDetail), 
++						baseX + BitShiftUtil.pow(x,dataDetail), baseZ + BitShiftUtil.pow(z,dataDetail),
+ 						columnArrayView, dataColumn);
+ 			}
+ 		}
+-		
++
+ 		columnSource.fillDebugFlag(0, 0, ColumnRenderSource.SECTION_SIZE, ColumnRenderSource.SECTION_SIZE, ColumnRenderSource.DebugSourceFlag.FULL);
+-		
++
+ 		return columnSource;
+ 	}
+-	
++
+ 	/** Updates the given {@link ColumnArrayView} to match the incoming Full data {@link LongArrayList} */
+ 	public static void updateOrReplaceRenderDataViewColumnWithFullDataColumn(
+-			IClientLevelWrapper levelWrapper, 
+-			FullDataPointIdMap fullDataMapping, int blockX, int blockZ, 
+-			ColumnArrayView columnArrayView, 
++			IClientLevelWrapper levelWrapper,
++			FullDataPointIdMap fullDataMapping, int blockX, int blockZ,
++			ColumnArrayView columnArrayView,
+ 			LongArrayList fullDataColumn)
+ 	{
+ 		// we can't do anything if the full data is missing or empty
+@@ -155,7 +159,7 @@ public class FullDataToRenderDataTransformer
+ 		{
+ 			return;
+ 		}
+-		
++
+ 		int fullDataLength = fullDataColumn.size();
+ 		if (fullDataLength <= columnArrayView.verticalSize())
+ 		{
+@@ -166,11 +170,13 @@ public class FullDataToRenderDataTransformer
+ 		{
+ 			PhantomArrayListCheckout checkout = ARRAY_LIST_POOL.checkoutArrays(0, 0, 1);
+ 			LongArrayList dataArrayList = checkout.getLongArray(0, fullDataLength);
+-			
++
+ 			try
+ 			{
++                ByteArrayList dataAdditional = new ByteArrayList();
++                dataAdditional.size(dataArrayList.size());
+ 				// expand the ColumnArrayView to fit the new larger max vertical size
+-				ColumnArrayView newColumnArrayView = new ColumnArrayView(dataArrayList, fullDataLength, 0, fullDataLength);
++				ColumnArrayView newColumnArrayView = new ColumnArrayView(dataArrayList, dataAdditional, fullDataLength, 0, fullDataLength);
+ 				setRenderColumnView(levelWrapper, fullDataMapping, blockX, blockZ, newColumnArrayView, fullDataColumn);
+ 				columnArrayView.changeVerticalSizeFrom(newColumnArrayView);
+ 			}
+@@ -188,15 +194,15 @@ public class FullDataToRenderDataTransformer
+ 		//===============//
+ 		// config values //
+ 		//===============//
+-		
++
+ 		boolean ignoreNonCollidingBlocks = (Config.Client.Advanced.Graphics.Quality.blocksToIgnore.get() == EDhApiBlocksToAvoid.NON_COLLIDING);
+ 		boolean colorBelowWithAvoidedBlocks = Config.Client.Advanced.Graphics.Quality.tintWithAvoidedBlocks.get();
+-		
++
+ 		HashSet<IBlockStateWrapper> blockStatesToIgnore = WRAPPER_FACTORY.getRendererIgnoredBlocks(levelWrapper);
+ 		HashSet<IBlockStateWrapper> caveBlockStatesToIgnore = WRAPPER_FACTORY.getRendererIgnoredCaveBlocks(levelWrapper);
+-		
++
+ 		int caveCullingMaxY = Config.Client.Advanced.Graphics.Culling.caveCullingHeight.get() - levelWrapper.getMinHeight();
+-		boolean caveCullingEnabled = 
++		boolean caveCullingEnabled =
+ 			Config.Client.Advanced.Graphics.Culling.enableCaveCulling.get()
+ 			&& (
+ 				// dimensions with a ceiling will be all caves so we don't want cave culling
+@@ -205,39 +211,43 @@ public class FullDataToRenderDataTransformer
+ 				// the current cave culling logic (this could probably be improved, but just skipping it works best for now)
+ 				&& !levelWrapper.getDimensionType().isTheEnd()
+ 			);
+-		
++
+ 		boolean isColumnVoid = true;
+-		
++
+ 		int colorToApplyToNextBlock = -1;
++        boolean nextBlockIsSnowy = false;
+ 		int lastColor = 0;
+ 		int lastBottom = -10_000;
+-		
++
+ 		int skylightToApplyToNextBlock = -1;
+ 		int blocklightToApplyToNextBlock = -1;
+ 		int renderDataIndex = 0;
+-		
+-		
+-		
++        int lastSnowFlags = 0;
++
++
++
+ 		//==================================//
+ 		// convert full data to render data //
+ 		//==================================//
+-		
++
+ 		DhBlockPosMutable mutableBlockPos = new DhBlockPosMutable(blockX, 0, blockZ);
+-		
++
++        boolean isFirst = true;
++
+ 		// goes from the top down
+ 		for (int fullDataIndex = 0; fullDataIndex < fullColumnData.size(); fullDataIndex++)
+ 		{
+ 			long fullData = fullColumnData.getLong(fullDataIndex);
+-			
++
+ 			int bottomY = FullDataPointUtil.getBottomY(fullData);
+ 			int blockHeight = FullDataPointUtil.getHeight(fullData);
+ 			int topY = bottomY + blockHeight;
+ 			int id = FullDataPointUtil.getId(fullData);
+ 			int blockLight = FullDataPointUtil.getBlockLight(fullData);
+ 			int skyLight = FullDataPointUtil.getSkyLight(fullData);
+-			
++
+ 			mutableBlockPos.setY(bottomY + levelWrapper.getMinHeight());
+-			
++
+ 			IBiomeWrapper biome;
+ 			IBlockStateWrapper block;
+ 			try
+@@ -257,25 +267,25 @@ public class FullDataToRenderDataTransformer
+ 							"Error: ["+e.getMessage()+"]. " +
+ 							"Further errors for this position won't be logged.");
+ 				}
+-				
++
+ 				// don't render broken data
+ 				continue;
+ 			}
+-			
+-			
+-			
++
++
++
+ 			//====================//
+ 			// ignored block and  //
+ 			// cave culling check //
+ 			//====================//
+-			
++
+ 			boolean ignoreBlock = blockStatesToIgnore.contains(block);
+ 			boolean caveBlock = caveBlockStatesToIgnore.contains(block); // TODO caves should also ignore transparent/non-solid blocks (IE grass and plants) wthout each being defined
+ 			if (caveBlock)
+ 			{
+ 				if (caveCullingEnabled
+ 					// assume this data point is underground if it has no sky-light
+-					&& skyLight == LodUtil.MIN_MC_LIGHT	
++					&& skyLight == LodUtil.MIN_MC_LIGHT
+ 					// ignore caves above a certain height to prevent floating islands from having walls underneath them
+ 					&& topY < caveCullingMaxY
+ 					// cave culling shouldn't happen when at the top of the world
+@@ -287,7 +297,7 @@ public class FullDataToRenderDataTransformer
+ 					// the air block here will always have a light of 0/0 due to only the top of the LOD's light being saved.
+ 					long nextFullData = fullColumnData.getLong(fullDataIndex+1);
+ 					int nextSkyLight = FullDataPointUtil.getSkyLight(nextFullData);
+-					
++
+ 					if (nextSkyLight == LodUtil.MIN_MC_LIGHT
+ 							&& ColorUtil.getAlpha(lastColor) == 255)
+ 					{
+@@ -296,11 +306,11 @@ public class FullDataToRenderDataTransformer
+ 						columnData = RenderDataPointUtil.setYMin(columnData, bottomY);
+ 						renderColumnData.set(renderDataIndex - 1, columnData);
+ 					}
+-					
++
+ 					continue;
+ 				}
+-				
+-				
++
++
+ 				if (ignoreBlock)
+ 				{
+ 					// this is a merged block and a cave block, so it should never be rendered
+@@ -312,20 +322,24 @@ public class FullDataToRenderDataTransformer
+ 				// this is an ignored block, but shouldn't be merged like a cave block
+ 				continue;
+ 			}
+-			
+-			
+-			
++
++
++
+ 			//=======================//
+ 			// non-solid block check //
+ 			//=======================//
+-			
+-			if (ignoreNonCollidingBlocks 
++
++			if (ignoreNonCollidingBlocks
+ 				&& !block.isSolid() && !block.isLiquid() && block.getOpacity() != LodUtil.BLOCK_FULLY_OPAQUE)
+ 			{
++                if (block == Blocks.snow_layer) {
++                    nextBlockIsSnowy = true;
++                    continue;
++                }
+ 				if (colorBelowWithAvoidedBlocks)
+ 				{
+ 					int tempColor = levelWrapper.getBlockColor(mutableBlockPos, biome, block);
+-					
++
+ 					// don't transfer the color when alpha is 0
+ 					// this prevents issues if grass is transparent
+ 					if (ColorUtil.getAlpha(tempColor) != 0)
+@@ -335,12 +349,12 @@ public class FullDataToRenderDataTransformer
+ 						blocklightToApplyToNextBlock = blockLight;
+ 					}
+ 				}
+-				
++
+ 				// skip this non-colliding block
+ 				continue;
+ 			}
+-			
+-			
++
++
+ 			int color;
+ 			if (colorToApplyToNextBlock == -1)
+ 			{
+@@ -355,15 +369,15 @@ public class FullDataToRenderDataTransformer
+ 				skyLight = skylightToApplyToNextBlock;
+ 				blockLight = blocklightToApplyToNextBlock;
+ 			}
+-			
+-			
+-			
++
++
++
+ 			//=============================//
+ 			// merge same-colored adjacent //
+ 			//=============================//
+-			
++
+ 			// check if they share a top-bottom face and if they have same color
+-			if (color == lastColor && bottomY + blockHeight == lastBottom  && renderDataIndex > 0)
++			if (color == lastColor && bottomY + blockHeight == lastBottom  && renderDataIndex > 0 && !nextBlockIsSnowy && ((lastSnowFlags & 0x3) == 0))
+ 			{
+ 				//replace the previous block with new bottom
+ 				long columnData = renderColumnData.get(renderDataIndex - 1);
+@@ -376,25 +390,32 @@ public class FullDataToRenderDataTransformer
+ 				isColumnVoid = false;
+ 				long columnData = RenderDataPointUtil.createDataPoint(bottomY + blockHeight, bottomY, color, skyLight, blockLight, block.getMaterialId());
+ 				renderColumnData.set(renderDataIndex, columnData);
++                BiomeGenBase realBiome = (BiomeGenBase) biome.getWrappedMcObject();
++                boolean isPermaSnow = realBiome.temperature <= 0.15;
++                boolean isPermaThaw = realBiome.temperature - 0.7 > 0.15;
++                lastSnowFlags = ((nextBlockIsSnowy ? 0x1 : 0) | (isFirst ? 0x2 : 0)| (isPermaSnow ? 0x4 : 0)| (isPermaThaw ? 0x8 : 0));
++                renderColumnData.setAdditional(renderDataIndex, (byte)lastSnowFlags);
+ 				renderDataIndex++;
++                isFirst = false;
+ 			}
+ 			lastBottom = bottomY;
+ 			lastColor = color;
++            nextBlockIsSnowy = false;
+ 		}
+-		
+-		
++
++
+ 		if (isColumnVoid)
+ 		{
+ 			renderColumnData.set(0, RenderDataPointUtil.EMPTY_DATA);
+ 		}
+ 	}
+-	
+-	
+-	
++
++
++
+ 	//================//
+ 	// helper methods //
+ 	//================//
+-	
++
+ 	/**
+ 	 * Called in loops that may run for an extended period of time. <br>
+ 	 * This is necessary to allow canceling these transformers since running
+@@ -407,5 +428,5 @@ public class FullDataToRenderDataTransformer
+ 			throw new InterruptedException(FullDataToRenderDataTransformer.class.getSimpleName() + " task interrupted.");
+ 		}
+ 	}
+-	
++
+ }
+diff --git a/src/main/java/com/seibel/distanthorizons/core/dataObjects/transformers/LodDataBuilder.java b/src/main/java/com/seibel/distanthorizons/core/dataObjects/transformers/LodDataBuilder.java
+index 3088a32fc..60031c757 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/dataObjects/transformers/LodDataBuilder.java
++++ b/src/main/java/com/seibel/distanthorizons/core/dataObjects/transformers/LodDataBuilder.java
+@@ -186,6 +186,7 @@ public class LodDataBuilder
+ 					
+ 					// Process blocks from top to bottom
+ 					boolean forceSingleBlock = false;
++                    boolean isFirst = true;
+ 					for (; y >= minBuildHeight; y--)
+ 					{
+ 						IBiomeWrapper newBiome = chunkWrapper.getBiome(relBlockX, y, relBlockZ);
+@@ -199,12 +200,14 @@ public class LodDataBuilder
+ 							// if the previous block potentially colors this block
+ 							// make this block a single entry, aka add the next block even if it is the same
+ 							// this is done to allow fire, snow, flowers, etc. to properly color the top of columns vs the whole column
+-							forceSingleBlock = 
++							forceSingleBlock =
+ 									!blockState.isAir()
+ 									&& !blockState.isSolid()
+ 									&& !blockState.isLiquid()
+-									&& blockState.getOpacity() != LodUtil.BLOCK_FULLY_OPAQUE;
+-							
++									&& blockState.getOpacity() != LodUtil.BLOCK_FULLY_OPAQUE || isFirst;
++
++                            isFirst = false;
++
+ 							longs.add(FullDataPointUtil.encode(mappedId, lastY - y, y + 1 - inclusiveMinBuildHeight, blockLight, skyLight));
+ 							biome = newBiome;
+ 							blockState = newBlockState;
+diff --git a/src/main/java/com/seibel/distanthorizons/core/render/renderer/DhTerrainShaderProgram.java b/src/main/java/com/seibel/distanthorizons/core/render/renderer/DhTerrainShaderProgram.java
+index 2e38478dd..3bc16bb2b 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/render/renderer/DhTerrainShaderProgram.java
++++ b/src/main/java/com/seibel/distanthorizons/core/render/renderer/DhTerrainShaderProgram.java
+@@ -34,6 +34,11 @@ import com.seibel.distanthorizons.core.util.LodUtil;
+ import com.seibel.distanthorizons.core.util.RenderUtil;
+ import com.seibel.distanthorizons.core.util.math.Mat4f;
+ import com.seibel.distanthorizons.core.util.math.Vec3f;
++import org.lwjgl.BufferUtils;
++import org.lwjgl.opengl.GL32;
++
++import java.awt.*;
++import java.nio.IntBuffer;
+ 
+ /**
+  * Handles rendering the normal LOD terrain.
+@@ -62,12 +67,16 @@ public class DhTerrainShaderProgram extends ShaderProgram implements IDhApiShade
+ 	public int uNoiseSteps = -1;
+ 	public int uNoiseIntensity = -1;
+ 	public int uNoiseDropoff = -1;
+-	
++
++ 	// Snow uniforms
++ 	public int uSnowColor = -1;
++     public int uLastTimeUpdateWinterSummer = -1;
++     public int uLastTimeUpdateAny = -1;
++
+ 	// Debug Uniform
+ 	public int uWhiteWorld = -1;
+ 	
+ 	
+-	
+ 	//=============//
+ 	// constructor //
+ 	//=============//
+@@ -81,8 +90,8 @@ public class DhTerrainShaderProgram extends ShaderProgram implements IDhApiShade
+ 								: "shaders/standard.vert",
+ 						false, new StringBuilder()).toString(),
+ 				() -> Shader.loadFile("shaders/flat_shaded.frag", false, new StringBuilder()).toString(),
+-				"fragColor", new String[]{"vPosition", "color"});
+-		
++				"fragColor", new String[]{"vPosition", "color", "lastTimeUpdateLo", "lastTimeUpdateHi", "quadPos"});
++
+ 		this.uCombinedMatrix = this.getUniformLocation("uCombinedMatrix");
+ 		this.uModelOffset = this.getUniformLocation("uModelOffset");
+ 		this.uWorldYOffset = this.tryGetUniformLocation("uWorldYOffset");
+@@ -101,6 +110,11 @@ public class DhTerrainShaderProgram extends ShaderProgram implements IDhApiShade
+ 		this.uNoiseIntensity = this.getUniformLocation("uNoiseIntensity");
+ 		this.uNoiseDropoff = this.getUniformLocation("uNoiseDropoff");
+ 		
++ 		// Snow uniforms
++  		this.uSnowColor = this.getUniformLocation("uSnowColor");
++        this.uLastTimeUpdateWinterSummer = this.getUniformLocation("uLastTimeUpdateWinterSummer");
++        this.uLastTimeUpdateAny = this.getUniformLocation("uLastTimeUpdateAny");
++
+ 		// Debug Uniform
+ 		this.uWhiteWorld = this.getUniformLocation("uWhiteWorld");
+ 		
+@@ -120,8 +134,10 @@ public class DhTerrainShaderProgram extends ShaderProgram implements IDhApiShade
+ 		// TODO comment what each attribute represents
+ 		this.vao.setVertexAttribute(0, 0, VertexPointer.addUnsignedShortsPointer(4, false, true)); // 2+2+2+2 // TODO probably color, blockpos
+ 		this.vao.setVertexAttribute(0, 1, VertexPointer.addUnsignedBytesPointer(4, true, false)); // +4 // TODO ?
+-		this.vao.setVertexAttribute(0, 2, VertexPointer.addUnsignedBytesPointer(4, true, true)); // +4 // TODO probably normal index and Iris block ID
+-		
++        this.vao.setVertexAttribute(0, 2, VertexPointer.addIntPointer(false, true));
++        this.vao.setVertexAttribute(0, 3, VertexPointer.addIntPointer(false, true));
++        this.vao.setVertexAttribute(0, 4, VertexPointer.addUnsignedBytesPointer(4,false, true));
++
+ 		try
+ 		{
+ 			this.vao.completeAndCheck(vertexByteCount);
+@@ -154,6 +170,15 @@ public class DhTerrainShaderProgram extends ShaderProgram implements IDhApiShade
+ 	{
+ 		super.bind();
+ 		this.vao.bind();
++        if (textureIdLastTimeUpdateWinterSummer == -1) {
++            textureIdLastTimeUpdateWinterSummer = generateTexture();
++            textureIdLastTimeUpdateAny = generateTexture();
++        }
++        GL32.glActiveTexture(GL32.GL_TEXTURE6);
++        GL32.glBindTexture(GL32.GL_TEXTURE_2D, textureIdLastTimeUpdateWinterSummer);
++        GL32.glActiveTexture(GL32.GL_TEXTURE7);
++        GL32.glBindTexture(GL32.GL_TEXTURE_2D, textureIdLastTimeUpdateAny);
++        GL32.glActiveTexture(GL32.GL_TEXTURE0);
+ 	}
+ 	@Override
+ 	public void unbind()
+@@ -171,22 +196,50 @@ public class DhTerrainShaderProgram extends ShaderProgram implements IDhApiShade
+ 	
+ 	@Override
+ 	public void bindVertexBuffer(int vbo) { this.vao.bindBufferToAllBindingPoints(vbo); }
+-	
++
++    static int textureIdLastTimeUpdateWinterSummer = -1;
++    static int textureIdLastTimeUpdateAny = -1;
++
++    public static void uploadSnowData(int[] summerWinter, int[] any) {
++        GL32.glActiveTexture(GL32.GL_TEXTURE6);
++        GL32.glBindTexture(GL32.GL_TEXTURE_2D, textureIdLastTimeUpdateWinterSummer);
++        GL32.glTexImage2D(GL32.GL_TEXTURE_2D, 0, GL32.GL_RGBA32UI,256, 256, 0, GL32.GL_RGBA_INTEGER, GL32.GL_UNSIGNED_INT, summerWinter);
++        GL32.glActiveTexture(GL32.GL_TEXTURE7);
++        GL32.glBindTexture(GL32.GL_TEXTURE_2D, textureIdLastTimeUpdateAny);
++        GL32.glTexImage2D(GL32.GL_TEXTURE_2D, 0, GL32.GL_RGBA32UI,256, 256, 0, GL32.GL_RGBA_INTEGER, GL32.GL_UNSIGNED_INT, any);
++        GL32.glActiveTexture(GL32.GL_TEXTURE0);
++    }
++
++    private static int generateTexture() {
++        int texture = GL32.glGenTextures();
++        GL32.glBindTexture(GL32.GL_TEXTURE_2D, texture);
++
++        GL32.glTexImage2D(GL32.GL_TEXTURE_2D, 0, GL32.GL_RGBA32UI,256, 256, 0, GL32.GL_RGBA_INTEGER, GL32.GL_UNSIGNED_INT, new int[256*256*4]);
++        GL32.glTexParameteri(GL32.GL_TEXTURE_2D, GL32.GL_TEXTURE_MIN_FILTER, GL32.GL_NEAREST);
++        GL32.glTexParameteri(GL32.GL_TEXTURE_2D, GL32.GL_TEXTURE_MAG_FILTER, GL32.GL_NEAREST);
++        GL32.glTexParameteri(GL32.GL_TEXTURE_2D, GL32.GL_TEXTURE_WRAP_S, GL32.GL_REPEAT);
++        GL32.glTexParameteri(GL32.GL_TEXTURE_2D, GL32.GL_TEXTURE_WRAP_T, GL32.GL_REPEAT);
++        return texture;
++    }
++
++
+ 	@Override
+ 	public void fillUniformData(DhApiRenderParam renderParameters)
+ 	{
+ 		Mat4f combinedMatrix = new Mat4f(renderParameters.dhProjectionMatrix);
+ 		combinedMatrix.multiply(renderParameters.dhModelViewMatrix);
+-		
++
+ 		super.bind();
+ 
+ 		// uniforms
+ 		this.setUniform(this.uCombinedMatrix, combinedMatrix);
+ 		this.setUniform(this.uMircoOffset, 0.01f); // 0.01 block offset
+-		
++
+ 		// setUniform(skyLightUniform, skyLight);
+ 		this.setUniform(this.uLightMap, 0); // TODO this should probably be passed in
+-		
++        this.setUniform(this.uLastTimeUpdateWinterSummer, 6);
++        this.setUniform(this.uLastTimeUpdateAny, 7);
++
+ 		if (this.uWorldYOffset != -1) this.setUniform(this.uWorldYOffset, (float) renderParameters.worldYOffset);
+ 		
+ 		if (this.uDitherDhRendering != -1) this.setUniform(this.uDitherDhRendering, Config.Client.Advanced.Graphics.Quality.ditherDhFade.get());
+@@ -208,6 +261,8 @@ public class DhTerrainShaderProgram extends ShaderProgram implements IDhApiShade
+ 			dhNearClipDistance = 1.0f;
+ 		}
+ 		this.setUniform(this.uClipDistance, dhNearClipDistance);
++
++		this.setUniform(this.uSnowColor, Color.WHITE);
+ 	}
+ 	
+ 	@Override
+diff --git a/src/main/java/com/seibel/distanthorizons/core/render/vertexFormat/DefaultLodVertexFormats.java b/src/main/java/com/seibel/distanthorizons/core/render/vertexFormat/DefaultLodVertexFormats.java
+index 6db6a4a67..cf7a520ed 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/render/vertexFormat/DefaultLodVertexFormats.java
++++ b/src/main/java/com/seibel/distanthorizons/core/render/vertexFormat/DefaultLodVertexFormats.java
+@@ -42,6 +42,7 @@ public class DefaultLodVertexFormats
+ 	public static final LodVertexFormatElement ELEMENT_IRIS_NORMAL_INDEX = new LodVertexFormatElement(0, LodVertexFormatElement.DataType.BYTE, 1, false);
+ 	
+ 	
++    public static final LodVertexFormatElement ELEMENT_UINT = new LodVertexFormatElement(0, LodVertexFormatElement.DataType.UINT, 1, false);
+ 	public static final LodVertexFormat POSITION = new LodVertexFormat(ImmutableList.<LodVertexFormatElement>builder().add(ELEMENT_POSITION).build());
+ 	public static final LodVertexFormat POSITION_COLOR = new LodVertexFormat(ImmutableList.<LodVertexFormatElement>builder().add(ELEMENT_POSITION).add(ELEMENT_COLOR).build());
+ 	public static final LodVertexFormat POSITION_COLOR_LIGHTMAP = new LodVertexFormat(ImmutableList.<LodVertexFormatElement>builder().add(ELEMENT_POSITION).add(ELEMENT_COLOR).add(ELEMENT_LIGHT_MAP_UV).build());
+@@ -61,10 +62,9 @@ public class DefaultLodVertexFormats
+ 			.add(ELEMENT_BYTE_PADDING)
+ 			.add(ELEMENT_LIGHT)
+ 			.add(ELEMENT_COLOR)
+-			.add(ELEMENT_IRIS_MATERIAL_INDEX)
+-			.add(ELEMENT_IRIS_NORMAL_INDEX)
+-			.add(ELEMENT_BYTE_PADDING)
+-			.add(ELEMENT_BYTE_PADDING) // padding is to make sure the format is a multiple of 4
++            .add(ELEMENT_UINT)
++            .add(ELEMENT_UINT)
++            .add(ELEMENT_UINT)
+ 			.build());
+ 	
+ }
+diff --git a/src/main/java/com/seibel/distanthorizons/core/util/RenderDataPointUtil.java b/src/main/java/com/seibel/distanthorizons/core/util/RenderDataPointUtil.java
+index 356736120..649667e0b 100644
+--- a/src/main/java/com/seibel/distanthorizons/core/util/RenderDataPointUtil.java
++++ b/src/main/java/com/seibel/distanthorizons/core/util/RenderDataPointUtil.java
+@@ -293,7 +293,7 @@ public class RenderDataPointUtil
+ 			// I expect this to never be the case,
+ 			// but RenderDataPointReducingList handles it sanely,
+ 			// so I might as well handle it sanely here too.
+-			output.fill(EMPTY_DATA);
++			output.fill(EMPTY_DATA, (byte)0);
+ 		}
+ 		else if (target == 1)
+ 		{
+diff --git a/src/main/resources/shaders/flat_shaded.frag b/src/main/resources/shaders/flat_shaded.frag
+index 0ed242f66..0529741ff 100644
+--- a/src/main/resources/shaders/flat_shaded.frag
++++ b/src/main/resources/shaders/flat_shaded.frag
+@@ -5,6 +5,8 @@ in vec3 vertexWorldPos;
+ in vec4 vPos;
+ in vec4 gl_FragCoord;
+ 
++flat in int isSnowy;
++
+ out vec4 fragColor;
+ 
+ 
+@@ -18,6 +20,7 @@ uniform float uNoiseIntensity;
+ uniform int uNoiseDropoff;
+ uniform bool uDitherDhRendering;
+ 
++uniform vec4 uSnowColor;
+ 
+ // The random functions for diffrent dimentions
+ float rand(float co) { return fract(sin(co*(91.3458)) * 47453.5453); }
+@@ -115,6 +118,10 @@ void main()
+             discard;
+         }
+     }
++
++    if (isSnowy > 0) {
++        fragColor = uSnowColor;
++    }
+     
+     if (uNoiseEnabled)
+     {
+diff --git a/src/main/resources/shaders/standard.vert b/src/main/resources/shaders/standard.vert
+index bcff6d9c8..c4fdaef83 100644
+--- a/src/main/resources/shaders/standard.vert
++++ b/src/main/resources/shaders/standard.vert
+@@ -3,10 +3,14 @@
+ in uvec4 vPosition;
+ out vec4 vPos;
+ in vec4 color;
++in uint lastTimeUpdateLo;
++in uint lastTimeUpdateHi;
++in uvec4 quadPos;
+ 
+ out vec4 vertexColor;
+ out vec3 vertexWorldPos;
+ out float vertexYPos;
++flat out int isSnowy;
+ 
+ uniform bool uWhiteWorld;
+ 
+@@ -18,6 +22,9 @@ uniform int uWorldSkyLight;
+ uniform sampler2D uLightMap;
+ uniform float uMircoOffset;
+ 
++uniform usampler2D uLastTimeUpdateWinterSummer;
++uniform usampler2D uLastTimeUpdateAny;
++
+ 
+ /** 
+  * TODO in the future this and curve.vert should be merged together to prevent inconsistencies between the two
+@@ -63,4 +70,47 @@ void main()
+     }
+ 
+     gl_Position = uCombinedMatrix * vec4(vertexWorldPos + vec3(mx, 0, mz), 1.0);
++
++    // Snow logic
++
++    // bit 1 = isSnow
++    // bit 2 = isPotentialSnow
++    // bit 3 = isPermaSnow
++    // bit 4 = isPermaThaw
++    uint snowFlags = quadPos.y;
++    bool isSnow = (snowFlags & 0x1u) != 0u;
++    bool isPotentialSnow = (snowFlags & 0x2u) != 0u;
++    bool isPermaSnow = (snowFlags & 0x4u) != 0u;
++    bool isPermaThaw = (snowFlags & 0x8u) != 0u;
++
++    uvec4 vecLastTimeUpdateWinterSummer = texelFetch(uLastTimeUpdateWinterSummer, ivec2(quadPos.xz), 0);
++    uvec4 vecLastTimeUpdateAny = texelFetch(uLastTimeUpdateAny, ivec2(quadPos.xz), 0);
++
++    uint lastSnowTickWinterLo = vecLastTimeUpdateWinterSummer.x;
++    uint lastSnowTickWinterHi = vecLastTimeUpdateWinterSummer.y;
++    uint lastThawTickSummerLo = vecLastTimeUpdateWinterSummer.z;
++    uint lastThawTickSummerHi = vecLastTimeUpdateWinterSummer.a;
++    uint lastSnowTickAnyLo = vecLastTimeUpdateAny.x;
++    uint lastSnowTickAnyHi = vecLastTimeUpdateAny.y;
++    uint lastThawTickAnyLo = vecLastTimeUpdateAny.z;
++    uint lastThawTickAnyHi = vecLastTimeUpdateAny.a;
++    
++    isSnowy = isSnow ? 1 : 0;
++    if (isPermaThaw) {
++        if (lastThawTickAnyLo > lastTimeUpdateLo) {
++            isSnowy = 0;
++        }
++    } else if (isPermaSnow) {
++        if (isPotentialSnow && lastSnowTickAnyLo > lastTimeUpdateLo) {
++            isSnowy = 1;
++        }
++    } else if (lastThawTickSummerLo > lastSnowTickWinterLo) {
++        if (lastThawTickSummerLo > lastTimeUpdateLo) {
++            isSnowy = 0;
++        }
++    } else {
++        if (isPotentialSnow && lastSnowTickWinterLo > lastTimeUpdateLo) {
++            isSnowy = 1;
++        }
++    }
+ }
+-- 
+2.55.0
+

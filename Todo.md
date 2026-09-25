@@ -1,0 +1,25 @@
+# TODO
+
+- Make the subseason duration configurable; it is currently hard-coded at 10,000 ticks.
+- Send a season update to clients when the server automatically advances to the next subseason.
+- Decide whether grass and foliage colors should transition gradually between subseasons instead of changing immediately.
+- Apply altitude-adjusted temperatures consistently when deciding whether columns snow or thaw, including unloaded-chunk catch-up.
+- Fix live-chunk biome lookup so each column uses its world coordinates instead of coordinates near the world origin.
+- Generate a new processing schedule whenever the global snowing state changes.
+- Randomize each new snow or thaw schedule instead of reusing one deterministic schedule for the life of the world.
+- Make the maximum snow/thaw schedule duration configurable; it is currently hard-coded at 1,000 ticks.
+- Consider replacing the Overworld-only restriction with a configurable dimension whitelist.
+- Restrict vanilla-snow suppression to dimensions with seasonal snow processing; it currently affects every dimension while seasonal snow runs only in the Overworld.
+- Make snow accumulation beneath leaf canopies configurable.
+- Persist each randomized snow/thaw schedule, or enough state to reconstruct it exactly, so an active schedule survives a world reload.
+- Reimplement the Distant Horizons snow integration as optional Seasonal Horizons mixins instead of maintaining a directly edited DH build.
+- Make the DH integration load only for supported DH versions and remain optional when DH is absent.
+- Carry snow state, snow eligibility, climate category, pattern coordinates, and LOD last-update time through DH data conversion, reduction, quad building, and vertex generation.
+- Add a non-rendered synthetic block above snowable surfaces while DH captures full-resolution terrain, using Minecraft's normal snow-placement rules. Treat an existing snow layer as inherently snowable.
+- Replace the prototype's topmost-rendered-surface approximation with snow eligibility derived from the synthetic marker or an existing snow layer.
+- Store the real last-update time in DH render data; the prototype patch currently writes zero into every vertex.
+- Synchronize the four snow/thaw timestamp grids to clients and upload updates to the DH shader on login, dimension change, and subsequent snow/thaw progress.
+- Compare complete 64-bit timestamps in the DH shader; the prototype patch carries high and low halves but compares only the low halves.
+- Add DH snow metadata without replacing vertex attributes required by DH or Iris.
+- Ensure snow-sensitive DH surfaces are not merged in ways that discard snow boundaries.
+- Limit the DH snow covering to the intended surface faces and integrate it with DH lighting and shading.
