@@ -229,20 +229,21 @@ public class SnowHandler {
         }
 
         long tick = world.getTotalWorldTime();
+        boolean winter = seasonWorldData.season.isWinter();
 
         for (int chunk = 0; chunk < 256; chunk++) {
             int[] schedule = chunkSchedules[chunk][seasonWorldData.schedulePos];
             for (int i = 0; i < schedule.length; i++) {
                 int blockPos = schedule[i];
                 int pos = (chunk << 8) + blockPos;
-                if (world.isRaining()) {
+                if (raining) {
                     seasonWorldData.lastSnowTicksAny[pos] = tick;
-                    if (seasonWorldData.season.isWinter()) {
+                    if (winter) {
                         seasonWorldData.lastSnowTicksWinter[pos] = tick;
                     }
                 }
                 seasonWorldData.lastThawTicksAny[pos] = tick;
-                if (!seasonWorldData.season.isWinter()) {
+                if (!winter) {
                     seasonWorldData.lastThawTicksSummer[pos] = tick;
                 }
             }
