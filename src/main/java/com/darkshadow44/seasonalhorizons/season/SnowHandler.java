@@ -11,6 +11,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 
+import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
 import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
 
 @SuppressWarnings("ForLoopReplaceableByForEach")
@@ -214,6 +215,13 @@ public class SnowHandler {
     }
 
     public void handleSnowServerGlobal() {
+        // Resolve a season boundary before updating either the global pattern or active chunks.
+        if (seasonWorldData.seasonTicks >= MAX_SEASON_LENGTH) {
+            seasonWorldData.seasonTicks = 0;
+            seasonWorldData.season = seasonWorldData.season.nextSeason();
+            NetworkHandler.sendSeasonUpdate(world);
+        }
+
         // Advance pattern
         seasonWorldData.schedulePos++;
         if (seasonWorldData.schedulePos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
@@ -240,13 +248,7 @@ public class SnowHandler {
             }
         }
 
-        // Advance season
-
         seasonWorldData.seasonTicks++;
-        if (seasonWorldData.seasonTicks >= MAX_SEASON_LENGTH) {
-            seasonWorldData.seasonTicks = 0;
-            seasonWorldData.season = seasonWorldData.season.nextSeason();
-        }
         seasonWorldData.markDirty();
     }
 }
