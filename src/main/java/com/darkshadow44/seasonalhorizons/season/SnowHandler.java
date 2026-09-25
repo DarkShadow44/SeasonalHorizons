@@ -35,7 +35,27 @@ public class SnowHandler {
         this.world = world;
         this.seasonWorldData = seasonWorldData;
 
-        Random random = new Random(world.getSeed());
+        if (!seasonWorldData.scheduleInitialized) {
+            seasonWorldData.scheduleInitialized = true;
+            seasonWorldData.scheduleRaining = world.isRaining();
+            seasonWorldData.scheduleSeed = createScheduleSeed(world.getTotalWorldTime(), world.isRaining());
+            seasonWorldData.schedulePos = -1;
+            seasonWorldData.markDirty();
+        } else if (seasonWorldData.schedulePos < 0 || seasonWorldData.schedulePos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
+            seasonWorldData.schedulePos = -1;
+            seasonWorldData.markDirty();
+        }
+
+        generateBlockSchedules(seasonWorldData.scheduleSeed);
+    }
+
+    private long createScheduleSeed(long tick, boolean raining) {
+        long weatherSalt = raining ? 0x9E3779B97F4A7C15L : 0xC2B2AE3D27D4EB4FL;
+        return new Random(world.getSeed() ^ seasonWorldData.scheduleSeed ^ tick ^ weatherSalt).nextLong();
+    }
+
+    private void generateBlockSchedules(long seed) {
+        Random random = new Random(seed);
         for (int chunk = 0; chunk < 256; chunk++) {
             int[][] schedule = generateBlockSchedule(random.nextInt());
             chunkSchedules[chunk] = schedule;
@@ -222,10 +242,17 @@ public class SnowHandler {
             NetworkHandler.sendSeasonUpdate(world);
         }
 
-        // Advance pattern
-        seasonWorldData.schedulePos++;
-        if (seasonWorldData.schedulePos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
+        boolean raining = world.isRaining();
+        if (raining != seasonWorldData.scheduleRaining) {
+            seasonWorldData.scheduleRaining = raining;
+            seasonWorldData.scheduleSeed = createScheduleSeed(world.getTotalWorldTime(), raining);
+            generateBlockSchedules(seasonWorldData.scheduleSeed);
             seasonWorldData.schedulePos = 0;
+        } else {
+            seasonWorldData.schedulePos++;
+            if (seasonWorldData.schedulePos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
+                seasonWorldData.schedulePos = 0;
+            }
         }
 
         long tick = world.getTotalWorldTime();

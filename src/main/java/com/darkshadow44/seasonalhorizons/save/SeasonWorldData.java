@@ -11,8 +11,12 @@ public class SeasonWorldData extends WorldSavedData {
 
     public int seasonTicks;
 
-    // Winter increments, summer decrements
+    // Current position in the active snow/thaw schedule
     public int schedulePos;
+
+    public boolean scheduleInitialized;
+    public boolean scheduleRaining;
+    public long scheduleSeed;
 
     public final long[] lastSnowTicksWinter = new long[256 * 256];
     public final long[] lastThawTicksSummer = new long[256 * 256];
@@ -47,6 +51,9 @@ public class SeasonWorldData extends WorldSavedData {
         season = Season.values()[tag.getByte("season")];
         seasonTicks = tag.getInteger("seasonTicks");
         schedulePos = tag.getInteger("schedulePos");
+        scheduleInitialized = tag.getBoolean("scheduleInitialized");
+        scheduleRaining = tag.getBoolean("scheduleRaining");
+        scheduleSeed = tag.getLong("scheduleSeed");
         readSeasonEventList(lastSnowTicksWinter, tag, "lastSnowTicksWinter");
         readSeasonEventList(lastSnowTicksAny, tag, "lastSnowTicksAny");
         readSeasonEventList(lastThawTicksSummer, tag, "lastThawTicksSummer");
@@ -58,6 +65,9 @@ public class SeasonWorldData extends WorldSavedData {
         tag.setByte("season", (byte) season.ordinal());
         tag.setInteger("seasonTicks", seasonTicks);
         tag.setInteger("schedulePos", schedulePos);
+        tag.setBoolean("scheduleInitialized", scheduleInitialized);
+        tag.setBoolean("scheduleRaining", scheduleRaining);
+        tag.setLong("scheduleSeed", scheduleSeed);
         writeSeasonEventList(lastSnowTicksWinter, tag, "lastSnowTicksWinter");
         writeSeasonEventList(lastSnowTicksAny, tag, "lastSnowTicksAny");
         writeSeasonEventList(lastThawTicksSummer, tag, "lastThawTicksSummer");
