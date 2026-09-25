@@ -210,7 +210,7 @@ public class SnowHandler {
         BiomeGenBase[] biomes = chunkBiomeCache.computeIfAbsent(chunk, (dummy) -> {
             BiomeGenBase[] ret = new BiomeGenBase[256];
             for (int i = 0; i < 256; i++) {
-                ret[i] = chunk.worldObj.getBiomeGenForCoords(i >> 4, i & 0xf);
+                ret[i] = chunk.worldObj.getBiomeGenForCoords((chunk.xPosition << 4) + (i >> 4), (chunk.zPosition << 4) + (i & 0xf));
             }
             return ret;
         });

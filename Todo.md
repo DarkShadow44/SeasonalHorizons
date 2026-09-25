@@ -3,7 +3,6 @@
 - Make the subseason duration configurable; it is currently hard-coded at 10,000 ticks.
 - Decide whether grass and foliage colors should transition gradually between subseasons instead of changing immediately.
 - Apply altitude-adjusted temperatures consistently when deciding whether columns snow or thaw, including unloaded-chunk catch-up.
-- Fix live-chunk biome lookup so each column uses its world coordinates instead of coordinates near the world origin.
 - Make the maximum snow/thaw schedule duration configurable; it is currently hard-coded at 1,000 ticks.
 - Consider replacing the Overworld-only restriction with a configurable dimension whitelist.
 - Restrict vanilla-snow suppression to dimensions with seasonal snow processing; it currently affects every dimension while seasonal snow runs only in the Overworld.
