@@ -18,6 +18,7 @@ Season Snow Logic:
 - Snow accumulation and thawing place and remove physical snow-layer blocks rather than using a texture overlay.
 - Surface water freezes and thaws with the same logic: where snow would accumulate, the topmost water freezes to ice (following Minecraft's normal freezing rules, applied to the whole surface rather than spreading from the shore), and where snow would thaw, surface ice melts the way Minecraft melts ice (into water, or into nothing in dimensions where water evaporates). In dimensions with seasons, Minecraft's random freezing is disabled, like its random snowfall.
 - Snow also accumulates on the ground beneath leaf canopies and thaws there under the same conditions.
+- Snow and ice changes do not trigger block updates in neighbouring blocks, for performance and so that changes at chunk edges never load adjacent chunks. Melted ice is the exception: the resulting water is updated itself so it can flow.
 - Thawing affects all snow layers and ice in the processed positions, including player-placed ones.
 - Note: Temperature gets colder the higher a block is, this is accounted for
 - We divide each column into 3 states: Perma snow, perma thaw and normal, normal snows in winter and thaws in other seasons.

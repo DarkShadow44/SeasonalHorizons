@@ -6,6 +6,7 @@ import java.util.WeakHashMap;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockLeavesBase;
+import net.minecraft.block.material.Material;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -119,6 +120,7 @@ public class SnowHandler {
         return (chunkX << 4) + chunkZ;
     }
 
+    // Writes go straight to the chunk for speed and so no neighbour updates load adjacent chunks
     private void processBlock(Chunk chunk, int x, int z, boolean snow) {
         int relX = x & 0xf;
         int relZ = z & 0xf;
@@ -150,8 +152,18 @@ public class SnowHandler {
                 chunk.func_150807_a(relX, y, relZ, Blocks.air, 0);
                 world.markBlockForUpdate(x, y, z);
             }
-            if (y > 0 && chunk.getBlock(relX, y - 1, relZ) == Blocks.ice) {
-                meltIce(x, y - 1, z);
+            if (y > 1 && chunk.getBlock(relX, y - 1, relZ) == Blocks.ice) {
+                // Don't melt floating ice; liquid counts so frozen deep water still melts
+                Material below = chunk.getBlock(relX, y - 2, relZ).getMaterial();
+                if (below.blocksMovement() || below.isLiquid()) {
+                    // Same result as vanilla ice melting from light
+                    Blocks.ice.dropBlockAsItem(world, x, y - 1, z, world.getBlockMetadata(x, y - 1, z), 0);
+                    Block melted = world.provider.isHellWorld ? Blocks.air : Blocks.water;
+                    chunk.func_150807_a(relX, y - 1, relZ, melted, 0);
+                    world.markBlockForUpdate(x, y - 1, z);
+                    // Update only the water itself so it starts flowing; notifying neighbours could load adjacent chunks
+                    world.notifyBlockOfNeighborChange(x, y - 1, z, Blocks.ice);
+                }
             }
             // Snow under trees
             boolean cont = true;
@@ -164,16 +176,6 @@ public class SnowHandler {
                     world.markBlockForUpdate(x, y, z);
                 }
             }
-        }
-    }
-
-    // Same result as vanilla ice melting from light
-    private void meltIce(int x, int y, int z) {
-        Blocks.ice.dropBlockAsItem(world, x, y, z, world.getBlockMetadata(x, y, z), 0);
-        if (world.provider.isHellWorld) {
-            world.setBlockToAir(x, y, z);
-        } else {
-            world.setBlock(x, y, z, Blocks.water);
         }
     }
 
