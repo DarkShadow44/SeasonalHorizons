@@ -209,6 +209,17 @@ public class SnowHandler {
         }
     }
 
+    // Indexed by (x & 15) << 4 | (z & 15)
+    private BiomeGenBase[] getChunkBiomes(Chunk chunk) {
+        return chunkBiomeCache.computeIfAbsent(chunk, (dummy) -> {
+            BiomeGenBase[] ret = new BiomeGenBase[256];
+            for (int i = 0; i < 256; i++) {
+                ret[i] = chunk.worldObj.getBiomeGenForCoords((chunk.xPosition << 4) + (i >> 4), (chunk.zPosition << 4) + (i & 0xf));
+            }
+            return ret;
+        });
+    }
+
     public void processChunk(Chunk chunk, long lastUpdateTime) {
         int chunkIndex = getBlockScheduleIndex(chunk.xPosition, chunk.zPosition);
         chunkIndex = chunkIndex << 8;
@@ -217,13 +228,14 @@ public class SnowHandler {
         long[] lastSnowTicksAny = seasonWorldData.lastSnowTicksAny;
         long[] lastThawTicksSummer = seasonWorldData.lastThawTicksSummer;
         long[] lastThawTicksAny = seasonWorldData.lastThawTicksAny;
+        BiomeGenBase[] biomes = getChunkBiomes(chunk);
 
         for (int i = 0; i < 16; i++) {
             for (int j = 0; j < 16; j++) {
                 int index = chunkIndex + (i << 4) + j;
                 int x = (chunk.xPosition << 4) + i;
                 int z = (chunk.zPosition << 4) + j;
-                BiomeGenBase biome = world.getBiomeGenForCoords(x, z);
+                BiomeGenBase biome = biomes[(i << 4) + j];
                 int y = chunk.getHeightValue(i, j);
                 boolean isPermaSnow = Season.SUMMER_MID.getAdjustedTemperatureFloat(biome, x, y, z) <= 0.15F;
                 boolean isPermaThaw = Season.WINTER_MID.getAdjustedTemperatureFloat(biome, x, y, z) > 0.15F;
@@ -259,13 +271,7 @@ public class SnowHandler {
         int index = getBlockScheduleIndex(chunk.xPosition, chunk.zPosition);
         int[] schedule = chunkSchedules[index][seasonWorldData.schedulePos];
 
-        BiomeGenBase[] biomes = chunkBiomeCache.computeIfAbsent(chunk, (dummy) -> {
-            BiomeGenBase[] ret = new BiomeGenBase[256];
-            for (int i = 0; i < 256; i++) {
-                ret[i] = chunk.worldObj.getBiomeGenForCoords((chunk.xPosition << 4) + (i >> 4), (chunk.zPosition << 4) + (i & 0xf));
-            }
-            return ret;
-        });
+        BiomeGenBase[] biomes = getChunkBiomes(chunk);
 
         for (int i = 0; i < schedule.length; i++) {
             int blockPos = schedule[i];
