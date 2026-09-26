@@ -204,17 +204,17 @@ public class SnowHandler {
         }
     }
 
-    // Fixed per column and world, so the same columns grow icicles every winter
-    private boolean isIcicleColumn(int x, int z) {
+    // Fixed per column and world, so the same columns are selected every year
+    private static boolean isSelectedColumn(int seed, int x, int z, float chance) {
         // Top 24 bits of the hash as a uniform value in [0, 1)
-        float value = (mix(icicleSeed ^ mix(x * 0x9E3779B9 ^ mix(z))) >>> 8) / (float) (1 << 24);
-        return value < Config.getIcicleChance();
+        float value = (mix(seed ^ mix(x * 0x9E3779B9 ^ mix(z))) >>> 8) / (float) (1 << 24);
+        return value < chance;
     }
 
     // Walks down through leaves, air and icicles. When snowing, grows icicles in air directly below leaves
     // in icicle columns; when thawing, removes snow and icicles on the way, including on the ground itself
     private int findGroundBelowCanopy(Chunk chunk, int x, int y, int z, boolean snow) {
-        boolean icicles = snow && Config.isIcicles() && isIcicleColumn(x, z);
+        boolean icicles = snow && Config.isIcicles() && isSelectedColumn(icicleSeed, x, z, Config.getIcicleChance());
         boolean cont = true;
         while (cont && y > 0) {
             y--;
