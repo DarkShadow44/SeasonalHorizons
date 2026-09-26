@@ -20,12 +20,10 @@ import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
 @SuppressWarnings("ForLoopReplaceableByForEach")
 public class SnowHandler {
 
-    private static final int MAX_SEASON_LENGTH = 10000;
-    private static final int MAX_TICKS_FOR_CHUNK_UPDATE = 1000;
     private static final int MAX_BLOCK_REPEAT = 4;
 
     // [(chunkX & 15) << 4 | (chunkZ & 15)][tick][] -> block positions ((blockX & 15) << 4 | (blockZ & 15)) to process
-    private final int[][][] chunkSchedules = new int[256][MAX_TICKS_FOR_CHUNK_UPDATE][];
+    private final int[][][] chunkSchedules = new int[256][][];
 
     private final WeakHashMap<Chunk, BiomeGenBase[]> chunkBiomeCache = new WeakHashMap<>();
 
@@ -45,7 +43,7 @@ public class SnowHandler {
             // -1 is safe: handleSnowServerGlobal runs before handleSnowServerTick each tick and advances it first
             seasonWorldData.schedulePos = -1;
             seasonWorldData.markDirty();
-        } else if (seasonWorldData.schedulePos < 0 || seasonWorldData.schedulePos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
+        } else if (seasonWorldData.schedulePos < 0 || seasonWorldData.schedulePos >= Config.getSnowScheduleLength()) {
             seasonWorldData.schedulePos = -1;
             seasonWorldData.markDirty();
         }
@@ -81,13 +79,14 @@ public class SnowHandler {
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
     private int[][] generateBlockSchedule(int seed) {
-        ArrayList[] schedule = new ArrayList[MAX_TICKS_FOR_CHUNK_UPDATE];
+        int scheduleLength = Config.getSnowScheduleLength();
+        ArrayList[] schedule = new ArrayList[scheduleLength];
 
         for (int repeat = 0; repeat < MAX_BLOCK_REPEAT; repeat++) {
             for (int i = 0; i < 256; i++) {
                 long hash = mix(seed ^ mix(i) ^ mix(repeat));
-                int slot = (int) (hash % MAX_TICKS_FOR_CHUNK_UPDATE);
-                if (slot < 0) slot += MAX_TICKS_FOR_CHUNK_UPDATE;
+                int slot = (int) (hash % scheduleLength);
+                if (slot < 0) slot += scheduleLength;
 
                 if (schedule[slot] == null) {
                     schedule[slot] = new ArrayList();
@@ -96,9 +95,9 @@ public class SnowHandler {
             }
         }
 
-        int[][] ret = new int[MAX_TICKS_FOR_CHUNK_UPDATE][];
+        int[][] ret = new int[scheduleLength][];
 
-        for (int i = 0; i < MAX_TICKS_FOR_CHUNK_UPDATE; i++) {
+        for (int i = 0; i < scheduleLength; i++) {
             if (schedule[i] == null) {
                 ret[i] = new int[0];
             } else {
@@ -313,7 +312,7 @@ public class SnowHandler {
 
     public void handleSnowServerGlobal() {
         // Resolve a season boundary before updating either the global pattern or active chunks.
-        if (seasonWorldData.seasonTicks >= MAX_SEASON_LENGTH) {
+        if (seasonWorldData.seasonTicks >= Config.getSubseasonLength()) {
             seasonWorldData.seasonTicks = 0;
             seasonWorldData.season = seasonWorldData.season.nextSeason();
             NetworkHandler.sendSeasonUpdate(world);
@@ -327,7 +326,7 @@ public class SnowHandler {
             seasonWorldData.schedulePos = 0;
         } else {
             seasonWorldData.schedulePos++;
-            if (seasonWorldData.schedulePos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
+            if (seasonWorldData.schedulePos >= Config.getSnowScheduleLength()) {
                 seasonWorldData.schedulePos = 0;
             }
         }
