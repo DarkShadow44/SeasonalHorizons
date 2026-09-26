@@ -13,6 +13,7 @@ import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 
 import com.darkshadow44.seasonalhorizons.Config;
+import com.darkshadow44.seasonalhorizons.block.BlockLeafPile;
 import com.darkshadow44.seasonalhorizons.block.ModBlocks;
 import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
 import com.darkshadow44.seasonalhorizons.save.IMixinChunk;
@@ -50,6 +51,8 @@ public class SnowHandler {
 
     // World seed folded to 32 bits for the icicle column hash
     private final int icicleSeed;
+    // Derived from icicleSeed so pile columns differ from icicle columns
+    private final int leafPileSeed;
 
     // Saved season data
     SeasonWorldData seasonWorldData;
@@ -59,6 +62,7 @@ public class SnowHandler {
         this.seasonWorldData = seasonWorldData;
         long seed = world.getSeed();
         this.icicleSeed = mix((int) (seed ^ (seed >>> 32)));
+        this.leafPileSeed = mix(icicleSeed ^ 0x5BD1E995);
 
         if (!seasonWorldData.scheduleInitialized) {
             seasonWorldData.scheduleInitialized = true;
@@ -138,6 +142,11 @@ public class SnowHandler {
         return tick;
     }
 
+    // Index into the global pattern for a block position, same format as the schedule entries
+    private int getPatternIndex(int x, int z) {
+        return (getBlockScheduleIndex(x >> 4, z >> 4) << 8) | ((x & 0xf) << 4) | (z & 0xf);
+    }
+
     private int getBlockScheduleIndex(int chunkX, int chunkZ) {
         chunkX = chunkX % 16;
         if (chunkX < 0) {
@@ -156,8 +165,10 @@ public class SnowHandler {
         if (y < 0 || y >= 256 || chunk.getSavedLightValue(EnumSkyBlock.Block, x & 0xf, y, z & 0xf) >= 10) {
             return;
         }
-        if (chunk.getBlock(x & 0xf, y, z & 0xf)
-            .getMaterial() == Material.air && Blocks.snow_layer.canPlaceBlockAt(world, x, y, z)) {
+        // Snow replaces leaf piles
+        Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
+        if ((block.getMaterial() == Material.air || block instanceof BlockLeafPile)
+            && Blocks.snow_layer.canPlaceBlockAt(world, x, y, z)) {
             chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.snow_layer, 0);
             world.markBlockForUpdate(x, y, z);
         }
@@ -231,11 +242,13 @@ public class SnowHandler {
 
     // Blocks the canopy walk passes through on its way down to the ground
     private boolean isCanopyPassable(Block block, int x, int y, int z) {
-        return block == ModBlocks.icicle || block.isLeaves(world, x, y, z) || block.isAir(world, x, y, z);
+        return block == ModBlocks.icicle || block instanceof BlockLeafPile
+            || block.isLeaves(world, x, y, z)
+            || block.isAir(world, x, y, z);
     }
 
     // Walks down from the surface through the canopy, growing icicles in air directly below leaves in icicle
-    // columns, then freezes water and places snow on the ground
+    // columns, then freezes water and places snow on the ground; snow replaces leaf piles
     private void processCanopySnow(Chunk chunk, int x, int y, int z) {
         boolean icicles = Config.isIcicles() && isSelectedColumn(icicleSeed, x, z, Config.getIcicleChance());
         while (y > 0) {
@@ -255,20 +268,34 @@ public class SnowHandler {
         }
     }
 
-    // Walks down from the surface through the canopy, removing snow and icicles on the way, then melts ice on the
-    // ground
+    // Walks down from the surface through the canopy, removing snow and icicles on the way, and leaf piles outside
+    // autumn, then melts ice on the ground. In autumn, places a pile of the lowest leaves on the ground
     private void processCanopyThaw(Chunk chunk, int x, int y, int z) {
+        boolean autumn = isAutumnAt(x, z);
+        Block lowestLeaves = null;
+        int lowestLeavesMeta = 0;
         while (y > 0) {
             y--;
             Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
+            if (block.isLeaves(world, x, y, z)) {
+                lowestLeaves = block;
+                lowestLeavesMeta = chunk.getBlockMetadata(x & 0xf, y, z & 0xf);
+            }
             processBlockRemoveSnow(chunk, x, y, z);
             processBlockRemoveIcicle(chunk, x, y, z);
+            if (!autumn && block instanceof BlockLeafPile) {
+                chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.air, 0);
+                world.markBlockForUpdate(x, y, z);
+            }
             if (!isCanopyPassable(block, x, y, z)) {
                 break;
             }
         }
 
         processBlockRemoveIce(chunk, x, y, z);
+        if (autumn && Config.isLeafPiles()) {
+            processBlockPlaceLeafPile(chunk, x, y + 1, z, lowestLeaves, lowestLeavesMeta);
+        }
     }
 
     // Like vanilla, use the precipitation height: the light height map passes through glass and similar blocks.
@@ -277,7 +304,28 @@ public class SnowHandler {
         return Math.max(chunk.getPrecipitationHeight(relX, relZ), 0);
     }
 
+    // Places a pile of the lowest canopy leaves on the ground, in air only
+    private void processBlockPlaceLeafPile(Chunk chunk, int x, int y, int z, Block leaves, int leavesMeta) {
+        if (leaves == null || !isSelectedColumn(leafPileSeed, x, z, Config.getLeafPileChance())) {
+            return;
+        }
+        BlockLeafPile pile = ModBlocks.getLeafPile(leaves, leavesMeta);
+        if (pile != null && chunk.getBlock(x & 0xf, y, z & 0xf)
+            .isAir(world, x, y, z) && pile.canPlaceBlockAt(world, x, y, z)) {
+            chunk.func_150807_a(x & 0xf, y, z & 0xf, pile, leavesMeta);
+            world.markBlockForUpdate(x, y, z);
+        }
+    }
+
+    // Season of the column's latest thaw processing: the current season on live ticks, and the season of the
+    // processing being caught up on otherwise
+    private boolean isAutumnAt(int x, int z) {
+        return seasonWorldData.getSeasonAt(seasonWorldData.lastThawTicksAny[getPatternIndex(x, z)])
+            .isAutumn();
+    }
+
     // Writes go straight to the chunk for speed and so no neighbour updates load adjacent chunks.
+    // Leaf piles are handled on thaw only: placed in autumn, removed otherwise; snow replaces them
     private void processColumn(Chunk chunk, int x, int z, boolean snow) {
         int y = getSurfaceHeight(chunk, x & 0xf, z & 0xf);
         if (snow) {

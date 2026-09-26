@@ -8,6 +8,10 @@
 - Calculate how long the schedule needs to be for ~1 update per second.
 - Biomes with custom color logic (swamp, mesa, roofed forest, BOP biomes) don't fire Forge's color events, so they keep their own colors but get no seasonal effect. Open idea: redirect the biome color calls in block `colorMultiplier`s and apply a multiplicative tint (`original × seasonal / vanilla colormap`, per channel) — identical to today for normal biomes; modded blocks need their own targets.
 - Icicles: the texture is a placeholder.
+- Future: falling leaf particles in autumn, coloured from the foliage color map.
+- Leaf litter piles (autumn only, see Concept.md), open decisions:
+    - Modded leaves in the list: pile blocks are registered in preInit, when other mods' leaves may not exist yet.
+    - Modded leaves may not use vanilla's metadata layout (type in `meta & 3`, decay flags in bits 4 and 8), may use tile entities, or may read the world in `getIcon`/`colorMultiplier`, which piles delegate to at their own position.
 
 ## Distant Horizons
 

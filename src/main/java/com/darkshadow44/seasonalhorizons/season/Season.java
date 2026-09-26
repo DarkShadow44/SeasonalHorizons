@@ -77,6 +77,10 @@ public enum Season {
         return colorMapGrass.getColor(temperature, rainfall);
     }
 
+    public boolean isAutumn() {
+        return mainSeason == MainSeason.AUTUMN;
+    }
+
     public boolean isWinter() {
         return isWinter;
     }

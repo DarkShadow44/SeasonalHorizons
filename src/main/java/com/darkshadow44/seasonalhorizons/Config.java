@@ -11,6 +11,11 @@ public class Config {
     private static boolean snowUnderCanopies = true;
     private static boolean icicles = true;
     private static float icicleChance = 0.02F;
+    private static final String[] DEFAULT_LEAF_PILE_LEAVES = { "minecraft:leaves:0", "minecraft:leaves:2",
+        "minecraft:leaves2:0", "minecraft:leaves2:1" };
+    private static boolean leafPiles = true;
+    private static float leafPileChance = 0.02F;
+    private static String[] leafPileLeaves = DEFAULT_LEAF_PILE_LEAVES;
     private static int subseasonLength = 10000;
     private static int snowScheduleLength = 1000;
 
@@ -29,7 +34,7 @@ public class Config {
             Configuration.CATEGORY_GENERAL,
             "walkCanopies",
             true,
-            "Whether columns beneath leaf canopies are processed at all. Required by snowUnderCanopies and icicles. Disabling improves performance; everything beneath canopies then stays as it is.")
+            "Whether columns beneath leaf canopies are processed at all. Required by snowUnderCanopies, icicles and leafPiles. Disabling improves performance; everything beneath canopies then stays as it is.")
             .getBoolean();
 
         snowUnderCanopies = configuration.get(
@@ -53,6 +58,29 @@ public class Config {
             0.0F,
             1.0F,
             "Fraction of columns in which icicles form below leaves.");
+
+        leafPiles = configuration.get(
+            Configuration.CATEGORY_GENERAL,
+            "leafPiles",
+            true,
+            "Whether leaf piles form beneath leaf canopies in autumn. Requires walkCanopies. Existing piles are still removed outside autumn when disabled.")
+            .getBoolean();
+
+        leafPileChance = configuration.getFloat(
+            "leafPileChance",
+            Configuration.CATEGORY_GENERAL,
+            0.02F,
+            0.0F,
+            1.0F,
+            "Fraction of columns in which leaf piles form beneath leaves.");
+
+        leafPileLeaves = configuration
+            .get(
+                Configuration.CATEGORY_GENERAL,
+                "leafPileLeaves",
+                DEFAULT_LEAF_PILE_LEAVES,
+                "Leaves that produce leaf piles, as modid:name:meta. Only vanilla leaves are supported for now.")
+            .getStringList();
 
         subseasonLength = configuration.getInt(
             "subseasonLength",
@@ -98,6 +126,18 @@ public class Config {
 
     public static float getIcicleChance() {
         return icicleChance;
+    }
+
+    public static boolean isLeafPiles() {
+        return leafPiles;
+    }
+
+    public static float getLeafPileChance() {
+        return leafPileChance;
+    }
+
+    public static String[] getLeafPileLeaves() {
+        return leafPileLeaves;
     }
 
     public static int getSubseasonLength() {
