@@ -388,7 +388,7 @@ public class SnowHandler {
         // Resolve a season boundary before updating either the global pattern or active chunks.
         if (seasonWorldData.seasonTicks >= Config.getSubseasonLength()) {
             seasonWorldData.seasonTicks = 0;
-            seasonWorldData.season = seasonWorldData.season.nextSeason();
+            seasonWorldData.changeSeason(seasonWorldData.season.nextSeason(), seasonWorldData.seasonTime);
             NetworkHandler.sendSeasonUpdate(world);
         }
 

@@ -9,6 +9,10 @@ public class SeasonWorldData extends WorldSavedData {
 
     public Season season = Season.SPRING_EARLY;
 
+    // Season before the latest change, and the first season time tick of the current season
+    public Season lastSeason = Season.SPRING_EARLY;
+    public long seasonChangeTick;
+
     public int seasonTicks;
 
     // Per-dimension clock for snow/thaw timestamps; only advances while the dimension is loaded
@@ -28,6 +32,18 @@ public class SeasonWorldData extends WorldSavedData {
 
     public SeasonWorldData(String name) {
         super(name);
+    }
+
+    // changeTick is the first season time tick that belongs to the new season
+    public void changeSeason(Season newSeason, long changeTick) {
+        lastSeason = season;
+        season = newSeason;
+        seasonChangeTick = changeTick;
+    }
+
+    // Exact for the current and the previous season; older ticks are reported as the previous season
+    public Season getSeasonAt(long tick) {
+        return tick >= seasonChangeTick ? season : lastSeason;
     }
 
     private void readSeasonEventList(long[] list, NBTTagCompound tag, String key) {
@@ -68,6 +84,8 @@ public class SeasonWorldData extends WorldSavedData {
         season = Season.values()[tag.getByte("season")];
         seasonTicks = tag.getInteger("seasonTicks");
         seasonTime = tag.getLong("seasonTime");
+        lastSeason = tag.hasKey("lastSeason") ? Season.values()[tag.getByte("lastSeason")] : season;
+        seasonChangeTick = tag.getLong("seasonChangeTick");
         schedulePos = tag.getInteger("schedulePos");
         scheduleInitialized = tag.getBoolean("scheduleInitialized");
         scheduleRaining = tag.getBoolean("scheduleRaining");
@@ -83,6 +101,8 @@ public class SeasonWorldData extends WorldSavedData {
         tag.setByte("season", (byte) season.ordinal());
         tag.setInteger("seasonTicks", seasonTicks);
         tag.setLong("seasonTime", seasonTime);
+        tag.setByte("lastSeason", (byte) lastSeason.ordinal());
+        tag.setLong("seasonChangeTick", seasonChangeTick);
         tag.setInteger("schedulePos", schedulePos);
         tag.setBoolean("scheduleInitialized", scheduleInitialized);
         tag.setBoolean("scheduleRaining", scheduleRaining);
