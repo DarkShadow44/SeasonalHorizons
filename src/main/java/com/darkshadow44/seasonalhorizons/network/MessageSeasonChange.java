@@ -21,7 +21,7 @@ public class MessageSeasonChange implements IMessage, IMessageHandler<MessageSea
 
     public MessageSeasonChange(World world, Season season) {
         this.dimension = world.provider.dimensionId;
-        this.season = season.ordinal();
+        this.season = season == null ? -1 : season.ordinal();
     }
 
     @Override
@@ -39,8 +39,8 @@ public class MessageSeasonChange implements IMessage, IMessageHandler<MessageSea
     @Override
     public IMessage onMessage(MessageSeasonChange message, MessageContext ctx) {
         if (ctx.side == Side.CLIENT) {
-            if (Minecraft.getMinecraft().thePlayer.dimension == dimension) {
-                Season season = Season.values()[message.season];
+            if (Minecraft.getMinecraft().thePlayer.dimension == message.dimension) {
+                Season season = message.season < 0 ? null : Season.values()[message.season];
                 SeasonHandler.updateClientSeason(season);
             }
         }

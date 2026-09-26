@@ -13,3 +13,7 @@
 
 - Do not stage files in git unless explicitly requested.
 - Do not compile or build this Minecraft project unless explicitly requested.
+
+## Codebase notes
+
+- In this 1.7.10 setup, network message handlers run on the main thread; no need to schedule their work onto it.

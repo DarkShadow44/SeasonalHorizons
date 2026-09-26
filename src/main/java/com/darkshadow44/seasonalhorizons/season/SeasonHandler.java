@@ -29,7 +29,8 @@ public class SeasonHandler {
             .findAny();
     }
 
-    private static Season currentSeasonClient = Season.SPRING_EARLY;
+    // Null when the client is in a dimension without seasons
+    private static Season currentSeasonClient;
 
     public static void updateClientSeason(Season season) {
         if (season == currentSeasonClient) {

@@ -8,6 +8,7 @@ import net.minecraft.world.WorldServer;
 import net.minecraft.world.WorldSettings;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.storage.ISaveHandler;
+import net.minecraft.world.storage.MapStorage;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -16,6 +17,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import com.darkshadow44.seasonalhorizons.Config;
 import com.darkshadow44.seasonalhorizons.save.IMixinWorldServer;
 import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
 import com.darkshadow44.seasonalhorizons.season.SnowHandler;
@@ -37,12 +39,13 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
     @Inject(method = "<init>", at = @At("TAIL"))
     private void constructor(MinecraftServer p_i45284_1_, ISaveHandler p_i45284_2_, String p_i45284_3_, int dimension,
         WorldSettings worldSettings, Profiler p_i45284_6_, CallbackInfo ci) {
-        if (dimension == 0) {
+        if (Config.isSeasonDimension(dimension)) {
             String dataName = "seasonalhorizons";
-            seasonalHorizons$seasonWorldData = (SeasonWorldData) this.loadItemData(SeasonWorldData.class, dataName);
+            MapStorage storage = this.perWorldStorage;
+            seasonalHorizons$seasonWorldData = (SeasonWorldData) storage.loadData(SeasonWorldData.class, dataName);
             if (seasonalHorizons$seasonWorldData == null) {
                 seasonalHorizons$seasonWorldData = new SeasonWorldData(dataName);
-                this.setItemData(dataName, seasonalHorizons$seasonWorldData);
+                storage.setData(dataName, seasonalHorizons$seasonWorldData);
             }
             seasonalHorizons$snowHandler = new SnowHandler(this, seasonalHorizons$seasonWorldData);
         }
@@ -52,7 +55,9 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
         method = "func_147456_g",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/world/WorldServer;func_147478_e(IIIZ)Z"))
     private boolean stopSnowing(WorldServer instance, int x, int y, int z, boolean checkLight) {
-        return false;
+        // Seasonal snow replaces vanilla snow only in dimensions with seasons
+        return seasonalHorizons$snowHandler == null && instance.func_147478_e(x, y, z, checkLight);
+    }
     }
 
     @Redirect(

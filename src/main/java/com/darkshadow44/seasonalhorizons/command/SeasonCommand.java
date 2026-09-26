@@ -38,6 +38,11 @@ public class SeasonCommand extends CommandBase {
                 return;
             }
 
+            if (SeasonHandler.getSeasonForWorld(sender.getEntityWorld()) == null) {
+                sender.addChatMessage(new ChatComponentText("This dimension has no seasons."));
+                return;
+            }
+
             SeasonHandler.setSeasonForWorld(sender.getEntityWorld(), season.get());
         } else {
             sender.addChatMessage(new ChatComponentText("Available subcommands:"));

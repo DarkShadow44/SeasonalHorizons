@@ -11,11 +11,17 @@ public class ColorHandler {
 
     public static int updateColorFoliage(BiomeGenBase biome, int originalColor) {
         Season season = SeasonHandler.getCurrentClientSeason();
+        if (season == null) {
+            return originalColor;
+        }
         return season.getFoliageColor(biome);
     }
 
     public static int updateColorGrass(BiomeGenBase biome, int originalColor) {
         Season season = SeasonHandler.getCurrentClientSeason();
+        if (season == null) {
+            return originalColor;
+        }
         return season.getGrassColor(biome);
     }
 }

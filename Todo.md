@@ -3,8 +3,7 @@
 - Make the subseason duration configurable; it is currently hard-coded at 10,000 ticks.
 - Decide whether grass and foliage colors should transition gradually between subseasons instead of changing immediately.
 - Make the maximum snow/thaw schedule duration configurable; it is currently hard-coded at 1,000 ticks.
-- Consider replacing the Overworld-only restriction with a configurable dimension whitelist.
-- Restrict vanilla-snow suppression to dimensions with seasonal snow processing; it currently affects every dimension while seasonal snow runs only in the Overworld.
+- Restrict vanilla-snow suppression to dimensions with seasonal snow processing; it currently affects every dimension while seasonal snow runs only in whitelisted dimensions.
 - Make snow accumulation beneath leaf canopies configurable.
 - Reimplement the Distant Horizons snow integration as optional Seasonal Horizons mixins instead of maintaining a directly edited DH build.
 - Make the DH integration load only for supported DH versions and remain optional when DH is absent.
@@ -19,3 +18,5 @@
 - Limit the DH snow covering to the intended surface faces and integrate it with DH lighting and shading.
 - Decide whether cached live-chunk biomes should refresh when a chunk's biome changes (world editors, biome-changing mods); they are currently cached until the chunk object is dropped.
 - Decide how precipitation interacts with biomes that normally have no rain (e.g. deserts); some seasons might bring rain there. Seasonal snow currently uses world-wide rain and does not check per-biome precipitation.
+- Decide how water freezing and ice melting follow the seasons; winter now lets water freeze in more places, but nothing melts that ice again in warmer seasons.
+- Decide whether a dimension's season should keep advancing while that dimension is unloaded; it currently pauses and drifts from other dimensions.
