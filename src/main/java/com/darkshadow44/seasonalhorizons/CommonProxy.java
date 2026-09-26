@@ -68,7 +68,7 @@ public class CommonProxy {
         SnowHandler snowHandler = mixinWorldServer.seasonalHorizons$getSnowHandler();
         if (snowHandler != null) { // Can happen during initial world generation or when there is no season
             IMixinChunk mixinChunk = (IMixinChunk) chunk;
-            snowHandler.processChunk(chunk, mixinChunk.seasonalHorizons$getLastSaveTime());
+            snowHandler.processChunk(chunk, mixinChunk.seasonalHorizons$getLastUpdateTime());
         }
     }
 }

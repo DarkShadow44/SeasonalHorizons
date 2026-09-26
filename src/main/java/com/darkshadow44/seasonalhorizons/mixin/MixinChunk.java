@@ -11,15 +11,15 @@ import com.darkshadow44.seasonalhorizons.save.IMixinChunk;
 public class MixinChunk implements IMixinChunk {
 
     @Unique
-    private long seasonalHorizons$lastSaveTime;
+    private long seasonalHorizons$lastUpdateTime;
 
     @Override
-    public void seasonalHorizons$setLastSaveTime(long time) {
-        seasonalHorizons$lastSaveTime = time;
+    public void seasonalHorizons$setLastUpdateTime(long time) {
+        seasonalHorizons$lastUpdateTime = time;
     }
 
     @Override
-    public long seasonalHorizons$getLastSaveTime() {
-        return seasonalHorizons$lastSaveTime;
+    public long seasonalHorizons$getLastUpdateTime() {
+        return seasonalHorizons$lastUpdateTime;
     }
 }

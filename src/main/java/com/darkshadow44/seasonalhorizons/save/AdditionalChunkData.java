@@ -20,20 +20,20 @@ public class AdditionalChunkData implements DataManager.ChunkDataManager {
 
     @Override
     public void writeChunkToNBT(Chunk chunk, NBTTagCompound nbt) {
-        long time = ((IMixinChunk) chunk).seasonalHorizons$getLastSaveTime();
-        nbt.setLong("seasonLastSaveTime", time);
+        long time = ((IMixinChunk) chunk).seasonalHorizons$getLastUpdateTime();
+        nbt.setLong("seasonLastUpdateTime", time);
     }
 
     @Override
     public void readChunkFromNBT(Chunk chunk, NBTTagCompound nbt) {
-        long time = nbt.getLong("seasonLastSaveTime");
-        ((IMixinChunk) chunk).seasonalHorizons$setLastSaveTime(time);
+        long time = nbt.getLong("seasonLastUpdateTime");
+        ((IMixinChunk) chunk).seasonalHorizons$setLastUpdateTime(time);
     }
 
     @Override
     public void cloneChunk(Chunk from, Chunk to) {
-        long time = ((IMixinChunk) from).seasonalHorizons$getLastSaveTime();
-        ((IMixinChunk) to).seasonalHorizons$setLastSaveTime(time);
+        long time = ((IMixinChunk) from).seasonalHorizons$getLastUpdateTime();
+        ((IMixinChunk) to).seasonalHorizons$setLastUpdateTime(time);
     }
 
     @Override
