@@ -3,7 +3,7 @@
   "refmap": "seasonalhorizons.refmap.json",
   "target": "@env(DEFAULT)",
   "minVersion": "0.7",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_8",
   "mixins": [
     "MixinChunk",
     "MixinWorld",
