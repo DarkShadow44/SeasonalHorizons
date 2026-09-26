@@ -5,7 +5,6 @@ import java.util.Random;
 import java.util.WeakHashMap;
 
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockLeavesBase;
 import net.minecraft.block.material.Material;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.EnumSkyBlock;
@@ -205,7 +204,7 @@ public class SnowHandler {
         while (cont && y > 0) {
             y--;
             Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
-            cont = block instanceof BlockLeavesBase || block.isAir(world, x, y, z);
+            cont = block.isLeaves(world, x, y, z) || block.isAir(world, x, y, z);
             if (removeSnow) {
                 processBlockRemoveSnow(chunk, x, y, z);
             }
