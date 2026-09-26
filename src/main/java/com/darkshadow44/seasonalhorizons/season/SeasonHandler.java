@@ -34,7 +34,12 @@ public class SeasonHandler {
 
         SeasonWorldData seasonWorldData = ((IMixinWorldServer) world).seasonalHorizons$getSeasonWorldData();
 
-        if (seasonWorldData == null || seasonWorldData.season == season) {
+        if (seasonWorldData == null) {
+            return;
+        }
+        // Start the subseason from the beginning, also when setting the current one again
+        seasonWorldData.seasonTicks = 0;
+        if (seasonWorldData.season == season) {
             return;
         }
         seasonWorldData.season = season;

@@ -1,5 +1,6 @@
 package com.darkshadow44.seasonalhorizons.command;
 
+import java.util.List;
 import java.util.Optional;
 
 import net.minecraft.command.CommandBase;
@@ -18,7 +19,18 @@ public class SeasonCommand extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "";
+        return "/season set <season name>";
+    }
+
+    @Override
+    public List<String> addTabCompletionOptions(ICommandSender sender, String[] args) {
+        if (args.length == 1) {
+            return getListOfStringsMatchingLastWord(args, "set");
+        }
+        if (args.length == 2 && args[0].equals("set")) {
+            return getListOfStringsMatchingLastWord(args, SeasonHandler.getSeasonIds());
+        }
+        return null;
     }
 
     @Override
