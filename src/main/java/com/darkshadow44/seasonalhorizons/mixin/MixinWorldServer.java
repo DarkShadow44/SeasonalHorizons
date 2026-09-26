@@ -76,7 +76,7 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
         // Vanilla only checks whether the biome can rain, so cauldrons would fill while it snows seasonally
         if (seasonalHorizons$snowHandler != null) {
             BiomeGenBase biome = world.getBiomeGenForCoords(x, z);
-            if (SeasonHandler.getAdjustedTemperature(world, biome, x, y + 1, z) < 0.15F) {
+            if (SeasonHandler.getAdjustedTemperature(world, biome, x, y + 1, z) <= 0.15F) {
                 return;
             }
         }
