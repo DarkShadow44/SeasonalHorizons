@@ -8,6 +8,8 @@ import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.IBlockAccess;
 
+import org.lwjgl.opengl.GL11;
+
 import cpw.mods.fml.client.registry.ISimpleBlockRenderingHandler;
 import cpw.mods.fml.client.registry.RenderingRegistry;
 import cpw.mods.fml.relauncher.Side;
@@ -54,13 +56,8 @@ public class RenderLeafPile implements ISimpleBlockRenderingHandler {
 
             // Texture coordinates follow the patch position; rotation varies the pattern between patches
             renderer.uvRotateTop = random.nextInt(4);
-            renderer.setRenderBounds(
-                minX / 16.0,
-                0.0,
-                minZ / 16.0,
-                (minX + sizeX) / 16.0,
-                height,
-                (minZ + sizeZ) / 16.0);
+            renderer
+                .setRenderBounds(minX / 16.0, 0.0, minZ / 16.0, (minX + sizeX) / 16.0, height, (minZ + sizeZ) / 16.0);
             renderer.renderFaceYPos(block, x, y, z, icon);
         }
 
@@ -70,11 +67,63 @@ public class RenderLeafPile implements ISimpleBlockRenderingHandler {
     }
 
     @Override
-    public void renderInventoryBlock(Block block, int metadata, int modelId, RenderBlocks renderer) {}
+    public void renderInventoryBlock(Block block, int metadata, int modelId, RenderBlocks renderer) {
+        IIcon icon = renderer.getBlockIconFromSideAndMetadata(block, 1, metadata);
+        int color = block.getRenderColor(metadata);
+        GL11.glColor4f((color >> 16 & 255) / 255.0F, (color >> 8 & 255) / 255.0F, (color & 255) / 255.0F, 1.0F);
+        GL11.glPushMatrix();
+        GL11.glTranslatef(-0.5F, -0.5F, -0.5F);
+
+        Random random = new Random(metadata * 42317861L);
+        int patches = MIN_PATCHES + random.nextInt(MAX_PATCHES - MIN_PATCHES + 1);
+        for (int i = 0; i < patches; i++) {
+            int sizeX = MIN_SIZE + random.nextInt(MAX_SIZE - MIN_SIZE + 1);
+            int sizeZ = MIN_SIZE + random.nextInt(MAX_SIZE - MIN_SIZE + 1);
+            int minX = random.nextInt(17 - sizeX);
+            int minZ = random.nextInt(17 - sizeZ);
+            double height = 1.0 / 32.0 + i / 128.0;
+            renderer
+                .setRenderBounds(minX / 16.0, 0.0, minZ / 16.0, (minX + sizeX) / 16.0, height, (minZ + sizeZ) / 16.0);
+            renderInventoryCuboid(block, renderer, icon);
+        }
+
+        renderer.setRenderBoundsFromBlock(block);
+        GL11.glPopMatrix();
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+    }
+
+    private static void renderInventoryCuboid(Block block, RenderBlocks renderer, IIcon icon) {
+        Tessellator tessellator = Tessellator.instance;
+
+        tessellator.startDrawingQuads();
+        tessellator.setNormal(0.0F, -1.0F, 0.0F);
+        renderer.renderFaceYNeg(block, 0.0, 0.0, 0.0, icon);
+        tessellator.draw();
+        tessellator.startDrawingQuads();
+        tessellator.setNormal(0.0F, 1.0F, 0.0F);
+        renderer.renderFaceYPos(block, 0.0, 0.0, 0.0, icon);
+        tessellator.draw();
+        tessellator.startDrawingQuads();
+        tessellator.setNormal(0.0F, 0.0F, -1.0F);
+        renderer.renderFaceZNeg(block, 0.0, 0.0, 0.0, icon);
+        tessellator.draw();
+        tessellator.startDrawingQuads();
+        tessellator.setNormal(0.0F, 0.0F, 1.0F);
+        renderer.renderFaceZPos(block, 0.0, 0.0, 0.0, icon);
+        tessellator.draw();
+        tessellator.startDrawingQuads();
+        tessellator.setNormal(-1.0F, 0.0F, 0.0F);
+        renderer.renderFaceXNeg(block, 0.0, 0.0, 0.0, icon);
+        tessellator.draw();
+        tessellator.startDrawingQuads();
+        tessellator.setNormal(1.0F, 0.0F, 0.0F);
+        renderer.renderFaceXPos(block, 0.0, 0.0, 0.0, icon);
+        tessellator.draw();
+    }
 
     @Override
     public boolean shouldRender3DInInventory(int modelId) {
-        return false;
+        return true;
     }
 
     @Override

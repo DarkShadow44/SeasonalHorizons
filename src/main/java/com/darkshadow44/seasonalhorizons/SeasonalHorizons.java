@@ -8,6 +8,7 @@ import com.darkshadow44.seasonalhorizons.command.SeasonCommand;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
+import cpw.mods.fml.common.event.FMLMissingMappingsEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 
@@ -35,6 +36,19 @@ public class SeasonalHorizons {
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
         proxy.init(event);
+    }
+
+    @Mod.EventHandler
+    public void missingMappings(FMLMissingMappingsEvent event) {
+        String leafPilePrefix = MODID + ":leaf_pile_";
+        for (FMLMissingMappingsEvent.MissingMapping mapping : event.get()) {
+            // Leaf-pile blocks are generated from configured leaf blocks. If that leaf's mod or the config entry
+            // is removed, the old pile is disposable and should become air instead of preventing the world from
+            // loading.
+            if (mapping.name.startsWith(leafPilePrefix)) {
+                mapping.ignore();
+            }
+        }
     }
 
     @Mod.EventHandler

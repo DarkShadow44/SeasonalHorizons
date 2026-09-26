@@ -1,3 +1,4 @@
 itemGroup.seasonalhorizons=Seasonal Horizons
 tile.seasonalhorizons.icicle.name=Icicle
 tile.seasonalhorizons.leaf_pile.name=Leaf Pile
+tile.seasonalhorizons.leaf_pile.named=Leaf Pile (%s)

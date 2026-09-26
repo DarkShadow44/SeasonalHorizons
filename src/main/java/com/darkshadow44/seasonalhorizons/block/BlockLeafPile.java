@@ -21,7 +21,8 @@ import com.darkshadow44.seasonalhorizons.SeasonalHorizons;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-// Leaf litter: scattered, nearly flat patches of leaves (see RenderLeafPile); one block per leaf block, metadata matches the leaf metadata
+// Leaf litter: scattered, nearly flat patches of leaves (see RenderLeafPile); one block per leaf block, metadata
+// matches the leaf metadata
 // so textures and colors can be taken from the leaves directly. Breaks into nothing
 public class BlockLeafPile extends Block {
 
@@ -49,6 +50,10 @@ public class BlockLeafPile extends Block {
 
     public boolean isEnabledMeta(int meta) {
         return enabledMeta[meta & 3];
+    }
+
+    public Block getLeaves() {
+        return leaves;
     }
 
     @Override
