@@ -211,6 +211,24 @@ public class SnowHandler {
         return value < chance;
     }
 
+    // Hangs from leaves directly above, in air not lit by block light of 10 or more (the same limit as snow)
+    private void processBlockPlaceIcicle(Chunk chunk, int x, int y, int z) {
+        if (chunk.getBlock(x & 0xf, y, z & 0xf)
+            .isAir(world, x, y, z) && chunk.getSavedLightValue(EnumSkyBlock.Block, x & 0xf, y, z & 0xf) < 10
+            && chunk.getBlock(x & 0xf, y + 1, z & 0xf)
+                .isLeaves(world, x, y + 1, z)) {
+            chunk.func_150807_a(x & 0xf, y, z & 0xf, ModBlocks.icicle, 0);
+            world.markBlockForUpdate(x, y, z);
+        }
+    }
+
+    private void processBlockRemoveIcicle(Chunk chunk, int x, int y, int z) {
+        if (chunk.getBlock(x & 0xf, y, z & 0xf) == ModBlocks.icicle) {
+            chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.air, 0);
+            world.markBlockForUpdate(x, y, z);
+        }
+    }
+
     // Blocks the canopy walk passes through on its way down to the ground
     private boolean isCanopyPassable(Block block, int x, int y, int z) {
         return block == ModBlocks.icicle || block.isLeaves(world, x, y, z) || block.isAir(world, x, y, z);
@@ -223,12 +241,8 @@ public class SnowHandler {
         while (y > 0) {
             y--;
             Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
-            if (icicles && block.isAir(world, x, y, z)
-                && chunk.getSavedLightValue(EnumSkyBlock.Block, x & 0xf, y, z & 0xf) < 10
-                && chunk.getBlock(x & 0xf, y + 1, z & 0xf)
-                    .isLeaves(world, x, y + 1, z)) {
-                chunk.func_150807_a(x & 0xf, y, z & 0xf, ModBlocks.icicle, 0);
-                world.markBlockForUpdate(x, y, z);
+            if (icicles) {
+                processBlockPlaceIcicle(chunk, x, y, z);
             }
             if (!isCanopyPassable(block, x, y, z)) {
                 break;
@@ -248,10 +262,7 @@ public class SnowHandler {
             y--;
             Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
             processBlockRemoveSnow(chunk, x, y, z);
-            if (block == ModBlocks.icicle) {
-                chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.air, 0);
-                world.markBlockForUpdate(x, y, z);
-            }
+            processBlockRemoveIcicle(chunk, x, y, z);
             if (!isCanopyPassable(block, x, y, z)) {
                 break;
             }
