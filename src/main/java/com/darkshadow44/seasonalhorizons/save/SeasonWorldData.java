@@ -86,8 +86,7 @@ public class SeasonWorldData extends WorldSavedData {
             lastThawSummerWasAutumn = tag.getByteArray("lastThawSummerWasAutumn");
             if (lastThawSummerWasAutumn.length != 256 * 256) {
                 throw new IllegalStateException(
-                    "Invalid season data for lastThawSummerWasAutumn: expected "
-                        + (256 * 256)
+                    "Invalid season data for lastThawSummerWasAutumn: expected " + (256 * 256)
                         + " entries, got "
                         + lastThawSummerWasAutumn.length);
             }
