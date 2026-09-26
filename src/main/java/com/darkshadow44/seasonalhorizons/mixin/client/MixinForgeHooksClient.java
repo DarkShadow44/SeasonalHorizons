@@ -19,8 +19,8 @@ public class MixinForgeHooksClient {
             value = "INVOKE",
             target = "Lnet/minecraft/world/biome/BiomeGenBase;getFloatTemperature(III)F",
             remap = true))
-    private static float getTemperature(BiomeGenBase biome, int x, int y, int z, World world, int playerX,
-        int playerY, int playerZ) {
+    private static float getTemperature(BiomeGenBase biome, int x, int y, int z, World world, int playerX, int playerY,
+        int playerZ) {
         return SeasonHandler.getAdjustedTemperature(world, biome, x, y, z);
     }
 }

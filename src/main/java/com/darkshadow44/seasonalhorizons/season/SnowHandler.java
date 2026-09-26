@@ -151,8 +151,8 @@ public class SnowHandler {
         if (y < 0 || y >= 256 || chunk.getSavedLightValue(EnumSkyBlock.Block, x & 0xf, y, z & 0xf) >= 10) {
             return;
         }
-        if (chunk.getBlock(x & 0xf, y, z & 0xf).getMaterial() == Material.air
-            && Blocks.snow_layer.canPlaceBlockAt(world, x, y, z)) {
+        if (chunk.getBlock(x & 0xf, y, z & 0xf)
+            .getMaterial() == Material.air && Blocks.snow_layer.canPlaceBlockAt(world, x, y, z)) {
             chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.snow_layer, 0);
             world.markBlockForUpdate(x, y, z);
         }
@@ -172,7 +172,8 @@ public class SnowHandler {
             return;
         }
         Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
-        if ((block == Blocks.water || block == Blocks.flowing_water) && chunk.getBlockMetadata(x & 0xf, y, z & 0xf) == 0) {
+        if ((block == Blocks.water || block == Blocks.flowing_water)
+            && chunk.getBlockMetadata(x & 0xf, y, z & 0xf) == 0) {
             chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.ice, 0);
             world.markBlockForUpdate(x, y, z);
         }
@@ -185,7 +186,8 @@ public class SnowHandler {
             return;
         }
         // Don't melt floating ice; liquid counts so frozen deep water still melts
-        Material below = chunk.getBlock(relX, y - 1, relZ).getMaterial();
+        Material below = chunk.getBlock(relX, y - 1, relZ)
+            .getMaterial();
         if (below.blocksMovement() || below.isLiquid()) {
             // Same result as vanilla ice melting from light
             Blocks.ice.dropBlockAsItem(world, x, y, z, world.getBlockMetadata(x, y, z), 0);
@@ -237,7 +239,8 @@ public class SnowHandler {
         return chunkBiomeCache.computeIfAbsent(chunk, (dummy) -> {
             BiomeGenBase[] ret = new BiomeGenBase[256];
             for (int i = 0; i < 256; i++) {
-                ret[i] = chunk.worldObj.getBiomeGenForCoords((chunk.xPosition << 4) + (i >> 4), (chunk.zPosition << 4) + (i & 0xf));
+                ret[i] = chunk.worldObj
+                    .getBiomeGenForCoords((chunk.xPosition << 4) + (i >> 4), (chunk.zPosition << 4) + (i & 0xf));
             }
             return ret;
         });
@@ -381,7 +384,8 @@ public class SnowHandler {
             // An entry is (chunkIndex << 8) | blockPos, which is also its index into the global pattern
             int pos = scheduleEntries[i];
             int entryChunk = pos >>> 8;
-            // Entries are ordered by chunk index, so this chunk and any skipped chunks before it (no entries this tick) start here
+            // Entries are ordered by chunk index, so this chunk and any skipped chunks before it (no entries this tick)
+            // start here
             while (chunk <= entryChunk) {
                 scheduleChunkStart[chunk++] = i;
             }

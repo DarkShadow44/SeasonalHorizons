@@ -22,12 +22,11 @@ public class Config {
                 "Dimension IDs that have seasons. Each dimension keeps and advances its own season.")
             .getIntList();
 
-        snowUnderCanopies = configuration
-            .get(
-                Configuration.CATEGORY_GENERAL,
-                "snowUnderCanopies",
-                true,
-                "Whether snow and ice form and thaw on the ground beneath leaf canopies. Disabling improves performance; existing snow and ice there then stays.")
+        snowUnderCanopies = configuration.get(
+            Configuration.CATEGORY_GENERAL,
+            "snowUnderCanopies",
+            true,
+            "Whether snow and ice form and thaw on the ground beneath leaf canopies. Disabling improves performance; existing snow and ice there then stays.")
             .getBoolean();
 
         subseasonLength = configuration.getInt(
