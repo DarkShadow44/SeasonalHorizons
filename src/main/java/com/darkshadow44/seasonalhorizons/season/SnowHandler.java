@@ -220,7 +220,7 @@ public class SnowHandler {
         });
     }
 
-    public void processChunk(Chunk chunk, long lastUpdateTime) {
+    public void processChunkPartial(Chunk chunk, long lastUpdateTime, int minX, int maxX, int minZ, int maxZ) {
         int chunkIndex = getBlockScheduleIndex(chunk.xPosition, chunk.zPosition);
         chunkIndex = chunkIndex << 8;
 
@@ -230,13 +230,13 @@ public class SnowHandler {
         long[] lastThawTicksAny = seasonWorldData.lastThawTicksAny;
         BiomeGenBase[] biomes = getChunkBiomes(chunk);
 
-        for (int i = 0; i < 16; i++) {
-            for (int j = 0; j < 16; j++) {
-                int index = chunkIndex + (i << 4) + j;
-                int x = (chunk.xPosition << 4) + i;
-                int z = (chunk.zPosition << 4) + j;
-                BiomeGenBase biome = biomes[(i << 4) + j];
-                int y = chunk.getHeightValue(i, j);
+        for (int currentX = minX; currentX < maxX; currentX++) {
+            for (int currentZ = minZ; currentZ < maxZ; currentZ++) {
+                int index = chunkIndex + (currentX << 4) + currentZ;
+                int x = (chunk.xPosition << 4) + currentX;
+                int z = (chunk.zPosition << 4) + currentZ;
+                BiomeGenBase biome = biomes[(currentX << 4) + currentZ];
+                int y = chunk.getHeightValue(currentX, currentZ);
                 boolean isPermaSnow = Season.SUMMER_MID.getAdjustedTemperatureFloat(biome, x, y, z) <= 0.15F;
                 boolean isPermaThaw = Season.WINTER_MID.getAdjustedTemperatureFloat(biome, x, y, z) > 0.15F;
 
@@ -265,6 +265,24 @@ public class SnowHandler {
                 }
             }
         }
+    }
+
+    public void processChunk(Chunk chunk, long lastUpdateTime) {
+        processChunkPartial(chunk, lastUpdateTime, 0, 16, 0, 16);
+    }
+
+    /**
+     * Catch up the area vanilla population places snow and ice in: 16x16 blocks offset by 8, spanning four chunks
+     * that population guarantees to be loaded. The generated snow has no real event behind it, so the whole area
+     * catches up from the beginning, including columns in already-populated neighbours.
+     */
+    public void processPopulatedArea(int chunkX, int chunkZ) {
+        // The populated chunk only needs x/z 8-16 here, the rest is covered when its neighbours populate.
+        // Process it fully anyway, in case a chunk generator places snow outside vanilla's area.
+        processChunk(world.getChunkFromChunkCoords(chunkX, chunkZ), 0);
+        processChunkPartial(world.getChunkFromChunkCoords(chunkX + 1, chunkZ), 0, 0, 8, 8, 16);
+        processChunkPartial(world.getChunkFromChunkCoords(chunkX, chunkZ + 1), 0, 8, 16, 0, 8);
+        processChunkPartial(world.getChunkFromChunkCoords(chunkX + 1, chunkZ + 1), 0, 0, 8, 0, 8);
     }
 
     public void handleSnowServerTick(Chunk chunk) {

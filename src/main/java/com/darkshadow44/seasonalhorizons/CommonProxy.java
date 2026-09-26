@@ -59,13 +59,10 @@ public class CommonProxy {
             return;
         }
 
-        Chunk chunk = event.world.getChunkFromChunkCoords(event.chunkX, event.chunkZ);
-
         IMixinWorldServer mixinWorldServer = (IMixinWorldServer) event.world;
         SnowHandler snowHandler = mixinWorldServer.seasonalHorizons$getSnowHandler();
         if (snowHandler != null) { // Can happen during initial world generation or when there is no season
-            IMixinChunk mixinChunk = (IMixinChunk) chunk;
-            snowHandler.processChunk(chunk, mixinChunk.seasonalHorizons$getLastSaveTime());
+            snowHandler.processPopulatedArea(event.chunkX, event.chunkZ);
         }
     }
 
