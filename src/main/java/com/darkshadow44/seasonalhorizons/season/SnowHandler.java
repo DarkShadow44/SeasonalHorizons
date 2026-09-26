@@ -1,6 +1,6 @@
 package com.darkshadow44.seasonalhorizons.season;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.WeakHashMap;
 
@@ -23,8 +23,26 @@ public class SnowHandler {
 
     private static final int MAX_BLOCK_REPEAT = 4;
 
-    // [(chunkX & 15) << 4 | (chunkZ & 15)][tick][] -> block positions ((blockX & 15) << 4 | (blockZ & 15)) to process
-    private final int[][][] chunkSchedules = new int[256][][];
+    /**
+     * 256x256 entries * MAX_BLOCK_REPEAT
+     * Format is (chunkIndex << 8) | blockPos
+     * Ordered by the tick they are due, ordered by chunk index within a tick
+     */
+    private final int[] scheduleEntries = new int[256 * 256 * MAX_BLOCK_REPEAT];
+
+    /**
+     * scheduleLength + 1 entries
+     * Index into scheduleEntries for each tick
+     * Each tick has scheduleTickStart[i + 1] - scheduleTickStart[i] entries
+     */
+    private int[] scheduleTickStart;
+
+    /**
+     * 256 + 1 entries
+     * Index into scheduleEntries for each chunk in current tick
+     * Each chunk has scheduleChunkStart[i + 1] - scheduleChunkStart[i] entries
+     */
+    private final int[] scheduleChunkStart = new int[256 + 1];
 
     private final WeakHashMap<Chunk, BiomeGenBase[]> chunkBiomeCache = new WeakHashMap<>();
 
@@ -58,10 +76,43 @@ public class SnowHandler {
     }
 
     private void generateBlockSchedules(long seed) {
+        int scheduleLength = Config.getSnowScheduleLength();
         Random random = new Random(seed);
+        if (scheduleTickStart == null || scheduleTickStart.length != scheduleLength + 1) {
+            scheduleTickStart = new int[scheduleLength + 1];
+        } else {
+            Arrays.fill(scheduleTickStart, 0);
+        }
+
+        // Drawn up front so both passes use the same seed per chunk
+        int[] chunkSeeds = new int[256];
         for (int chunk = 0; chunk < 256; chunk++) {
-            int[][] schedule = generateBlockSchedule(random.nextInt());
-            chunkSchedules[chunk] = schedule;
+            chunkSeeds[chunk] = random.nextInt();
+        }
+
+        // Count the entries of each tick one index ahead, so the prefix sum yields the start indices
+        for (int chunk = 0; chunk < 256; chunk++) {
+            for (int i = 0; i < 256; i++) {
+                for (int repeat = 0; repeat < MAX_BLOCK_REPEAT; repeat++) {
+                    int tick = getScheduleTick(chunkSeeds[chunk], i, repeat, scheduleLength);
+                    scheduleTickStart[tick + 1]++;
+                }
+            }
+        }
+        // Finalize scheduleTickStart
+        for (int tick = 0; tick < scheduleLength; tick++) {
+            scheduleTickStart[tick + 1] += scheduleTickStart[tick];
+        }
+
+        // Chunk outermost keeps the entries of each tick ordered by chunk index
+        int[] nextEntry = Arrays.copyOf(scheduleTickStart, scheduleLength);
+        for (int chunk = 0; chunk < 256; chunk++) {
+            for (int i = 0; i < 256; i++) {
+                for (int repeat = 0; repeat < MAX_BLOCK_REPEAT; repeat++) {
+                    int tick = getScheduleTick(chunkSeeds[chunk], i, repeat, scheduleLength);
+                    scheduleEntries[nextEntry[tick]++] = (chunk << 8) | i;
+                }
+            }
         }
     }
 
@@ -74,40 +125,12 @@ public class SnowHandler {
         return x;
     }
 
-    /**
-     * Get the block schedule. Length of the array is the maximum time (in ticks) where a chunk should be completely
-     * processed. schedule[i] is the array of coordinates of the block (x * 16 + z) to process at tick i.
-     */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    private int[][] generateBlockSchedule(int seed) {
-        int scheduleLength = Config.getSnowScheduleLength();
-        ArrayList[] schedule = new ArrayList[scheduleLength];
-
-        for (int repeat = 0; repeat < MAX_BLOCK_REPEAT; repeat++) {
-            for (int i = 0; i < 256; i++) {
-                long hash = mix(seed ^ mix(i) ^ mix(repeat));
-                int slot = (int) (hash % scheduleLength);
-                if (slot < 0) slot += scheduleLength;
-
-                if (schedule[slot] == null) {
-                    schedule[slot] = new ArrayList();
-                }
-                schedule[slot].add(i);
-            }
-        }
-
-        int[][] ret = new int[scheduleLength][];
-
-        for (int i = 0; i < scheduleLength; i++) {
-            if (schedule[i] == null) {
-                ret[i] = new int[0];
-            } else {
-                ret[i] = schedule[i].stream()
-                    .mapToInt(x -> (int) x)
-                    .toArray();
-            }
-        }
-        return ret;
+    // The tick at which the block is processed for the given repeat
+    private static int getScheduleTick(int chunkSeed, int blockPos, int repeat, int scheduleLength) {
+        long hash = mix(chunkSeed ^ mix(blockPos) ^ mix(repeat));
+        int tick = (int) (hash % scheduleLength);
+        if (tick < 0) tick += scheduleLength;
+        return tick;
     }
 
     private int getBlockScheduleIndex(int chunkX, int chunkZ) {
@@ -296,12 +319,12 @@ public class SnowHandler {
         }
 
         int index = getBlockScheduleIndex(chunk.xPosition, chunk.zPosition);
-        int[] schedule = chunkSchedules[index][seasonWorldData.schedulePos];
-
-        BiomeGenBase[] biomes = getChunkBiomes(chunk);
-
-        for (int i = 0; i < schedule.length; i++) {
-            int blockPos = schedule[i];
+        int start = scheduleChunkStart[index];
+        int end = scheduleChunkStart[index + 1];
+        // Most chunks have nothing scheduled on a given tick; skip the biome cache lookup for them
+        BiomeGenBase[] biomes = start < end ? getChunkBiomes(chunk) : null;
+        for (int i = start; i < end; i++) {
+            int blockPos = scheduleEntries[i] & 0xff;
             int x = (chunk.xPosition << 4) + (blockPos >> 4);
             int z = (chunk.zPosition << 4) + (blockPos & 0xf);
 
@@ -350,22 +373,32 @@ public class SnowHandler {
         long tick = seasonWorldData.seasonTime;
         boolean winter = seasonWorldData.season.isWinter();
 
-        for (int chunk = 0; chunk < 256; chunk++) {
-            int[] schedule = chunkSchedules[chunk][seasonWorldData.schedulePos];
-            for (int i = 0; i < schedule.length; i++) {
-                int blockPos = schedule[i];
-                int pos = (chunk << 8) + blockPos;
-                if (raining) {
-                    seasonWorldData.lastSnowTicksAny[pos] = tick;
-                    if (winter) {
-                        seasonWorldData.lastSnowTicksWinter[pos] = tick;
-                    }
-                }
-                seasonWorldData.lastThawTicksAny[pos] = tick;
-                if (!winter) {
-                    seasonWorldData.lastThawTicksSummer[pos] = tick;
+        // Update the global pattern and record each chunk's range of this tick's entries for the active chunks
+        int start = scheduleTickStart[seasonWorldData.schedulePos];
+        int end = scheduleTickStart[seasonWorldData.schedulePos + 1];
+        int chunk = 0;
+        for (int i = start; i < end; i++) {
+            // An entry is (chunkIndex << 8) | blockPos, which is also its index into the global pattern
+            int pos = scheduleEntries[i];
+            int entryChunk = pos >>> 8;
+            // Entries are ordered by chunk index, so this chunk and any skipped chunks before it (no entries this tick) start here
+            while (chunk <= entryChunk) {
+                scheduleChunkStart[chunk++] = i;
+            }
+            if (raining) {
+                seasonWorldData.lastSnowTicksAny[pos] = tick;
+                if (winter) {
+                    seasonWorldData.lastSnowTicksWinter[pos] = tick;
                 }
             }
+            seasonWorldData.lastThawTicksAny[pos] = tick;
+            if (!winter) {
+                seasonWorldData.lastThawTicksSummer[pos] = tick;
+            }
+        }
+        // Fill in remaining chunks that don't get processed this tick
+        while (chunk <= 256) {
+            scheduleChunkStart[chunk++] = end;
         }
 
         seasonWorldData.seasonTicks++;
