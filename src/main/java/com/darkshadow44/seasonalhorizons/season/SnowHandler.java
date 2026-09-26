@@ -211,32 +211,53 @@ public class SnowHandler {
         return value < chance;
     }
 
-    // Walks down through leaves, air and icicles. When snowing, grows icicles in air directly below leaves
-    // in icicle columns; when thawing, removes snow and icicles on the way, including on the ground itself
-    private int findGroundBelowCanopy(Chunk chunk, int x, int y, int z, boolean snow) {
-        boolean icicles = snow && Config.isIcicles() && isSelectedColumn(icicleSeed, x, z, Config.getIcicleChance());
-        boolean cont = true;
-        while (cont && y > 0) {
+    // Blocks the canopy walk passes through on its way down to the ground
+    private boolean isCanopyPassable(Block block, int x, int y, int z) {
+        return block == ModBlocks.icicle || block.isLeaves(world, x, y, z) || block.isAir(world, x, y, z);
+    }
+
+    // Walks down from the surface through the canopy, growing icicles in air directly below leaves in icicle
+    // columns, then freezes water and places snow on the ground
+    private void processCanopySnow(Chunk chunk, int x, int y, int z) {
+        boolean icicles = Config.isIcicles() && isSelectedColumn(icicleSeed, x, z, Config.getIcicleChance());
+        while (y > 0) {
             y--;
             Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
-            cont = block == ModBlocks.icicle || block.isLeaves(world, x, y, z) || block.isAir(world, x, y, z);
-            if (snow) {
-                if (icicles && block.isAir(world, x, y, z)
-                    && chunk.getSavedLightValue(EnumSkyBlock.Block, x & 0xf, y, z & 0xf) < 10
-                    && chunk.getBlock(x & 0xf, y + 1, z & 0xf)
-                        .isLeaves(world, x, y + 1, z)) {
-                    chunk.func_150807_a(x & 0xf, y, z & 0xf, ModBlocks.icicle, 0);
-                    world.markBlockForUpdate(x, y, z);
-                }
-            } else {
-                processBlockRemoveSnow(chunk, x, y, z);
-                if (block == ModBlocks.icicle) {
-                    chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.air, 0);
-                    world.markBlockForUpdate(x, y, z);
-                }
+            if (icicles && block.isAir(world, x, y, z)
+                && chunk.getSavedLightValue(EnumSkyBlock.Block, x & 0xf, y, z & 0xf) < 10
+                && chunk.getBlock(x & 0xf, y + 1, z & 0xf)
+                    .isLeaves(world, x, y + 1, z)) {
+                chunk.func_150807_a(x & 0xf, y, z & 0xf, ModBlocks.icicle, 0);
+                world.markBlockForUpdate(x, y, z);
+            }
+            if (!isCanopyPassable(block, x, y, z)) {
+                break;
             }
         }
-        return y;
+
+        if (Config.isSnowUnderCanopies()) {
+            processBlockPlaceIce(chunk, x, y, z);
+            processBlockPlaceSnow(chunk, x, y + 1, z);
+        }
+    }
+
+    // Walks down from the surface through the canopy, removing snow and icicles on the way, then melts ice on the
+    // ground
+    private void processCanopyThaw(Chunk chunk, int x, int y, int z) {
+        while (y > 0) {
+            y--;
+            Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
+            processBlockRemoveSnow(chunk, x, y, z);
+            if (block == ModBlocks.icicle) {
+                chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.air, 0);
+                world.markBlockForUpdate(x, y, z);
+            }
+            if (!isCanopyPassable(block, x, y, z)) {
+                break;
+            }
+        }
+
+        processBlockRemoveIce(chunk, x, y, z);
     }
 
     // Like vanilla, use the precipitation height: the light height map passes through glass and similar blocks.
@@ -252,18 +273,13 @@ public class SnowHandler {
             processBlockPlaceIce(chunk, x, y - 1, z);
             processBlockPlaceSnow(chunk, x, y, z);
             if (Config.isWalkCanopies()) {
-                y = findGroundBelowCanopy(chunk, x, y, z, true);
-                if (Config.isSnowUnderCanopies()) {
-                    processBlockPlaceIce(chunk, x, y, z);
-                    processBlockPlaceSnow(chunk, x, y + 1, z);
-                }
+                processCanopySnow(chunk, x, y, z);
             }
         } else {
             processBlockRemoveSnow(chunk, x, y, z);
             processBlockRemoveIce(chunk, x, y - 1, z);
             if (Config.isWalkCanopies()) {
-                y = findGroundBelowCanopy(chunk, x, y, z, false);
-                processBlockRemoveIce(chunk, x, y, z);
+                processCanopyThaw(chunk, x, y, z);
             }
         }
     }
