@@ -40,6 +40,11 @@ public class CommonProxy {
     }
 
     @SubscribeEvent
+    public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        NetworkHandler.sendSeasonUpdate(event.player.worldObj);
+    }
+
+    @SubscribeEvent
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         NetworkHandler.sendSeasonUpdate(event.player.worldObj);
     }
