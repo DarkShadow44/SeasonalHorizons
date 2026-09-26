@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.Optional;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -69,11 +68,12 @@ public class SeasonHandler {
             return seasonWorldData.season;
         }
 
-        if (world instanceof WorldClient) {
+        if (world.isRemote) {
             return currentSeasonClient;
         }
 
-        throw new RuntimeException("Failed to get season for world type: " + world.getClass());
+        // Unknown world types (e.g. fake worlds from other mods) have no season
+        return null;
     }
 
     public static float getAdjustedTemperature(World world, BiomeGenBase biome, int x, int y, int z) {
