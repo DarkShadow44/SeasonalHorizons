@@ -8,6 +8,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockLeavesBase;
 import net.minecraft.block.material.Material;
 import net.minecraft.init.Blocks;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
@@ -121,8 +122,14 @@ public class SnowHandler {
         return (chunkX << 4) + chunkZ;
     }
 
+    // Vanilla canSnowAtBody without the temperature check; callers already decided from the timestamps,
+    // and the vanilla check would use the current season, which is wrong when a chunk catches up
     private void processBlockPlaceSnow(Chunk chunk, int x, int y, int z) {
-        if (world.func_147478_e(x, y, z, true)) {
+        if (y < 0 || y >= 256 || chunk.getSavedLightValue(EnumSkyBlock.Block, x & 0xf, y, z & 0xf) >= 10) {
+            return;
+        }
+        if (chunk.getBlock(x & 0xf, y, z & 0xf).getMaterial() == Material.air
+            && Blocks.snow_layer.canPlaceBlockAt(world, x, y, z)) {
             chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.snow_layer, 0);
             world.markBlockForUpdate(x, y, z);
         }
@@ -135,9 +142,14 @@ public class SnowHandler {
         }
     }
 
+    // Vanilla canBlockFreezeBody without the temperature check (see processBlockPlaceSnow), and with
+    // byWater=false so the water freezes independent of neighbors
     private void processBlockPlaceIce(Chunk chunk, int x, int y, int z) {
-        // False freezes the water independent of neighbors
-        if (world.canBlockFreeze(x, y, z, false)) {
+        if (y < 0 || y >= 256 || chunk.getSavedLightValue(EnumSkyBlock.Block, x & 0xf, y, z & 0xf) >= 10) {
+            return;
+        }
+        Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
+        if ((block == Blocks.water || block == Blocks.flowing_water) && chunk.getBlockMetadata(x & 0xf, y, z & 0xf) == 0) {
             chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.ice, 0);
             world.markBlockForUpdate(x, y, z);
         }
