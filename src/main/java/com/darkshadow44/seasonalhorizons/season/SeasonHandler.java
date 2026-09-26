@@ -3,12 +3,10 @@ package com.darkshadow44.seasonalhorizons.season;
 import java.util.Arrays;
 import java.util.Optional;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.biome.BiomeGenBase;
 
-import com.darkshadow44.seasonalhorizons.mixin.client.AccessorForgeHooksClient;
 import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
 import com.darkshadow44.seasonalhorizons.save.IMixinWorldServer;
 import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
@@ -27,22 +25,6 @@ public class SeasonHandler {
                 x -> x.getId()
                     .equals(id))
             .findAny();
-    }
-
-    // Null when the client is in a dimension without seasons
-    private static Season currentSeasonClient;
-
-    public static void updateClientSeason(Season season) {
-        if (season == currentSeasonClient) {
-            return;
-        }
-        currentSeasonClient = season;
-        AccessorForgeHooksClient.setSkyInit(false);
-        Minecraft.getMinecraft().renderGlobal.loadRenderers();
-    }
-
-    public static Season getCurrentClientSeason() {
-        return currentSeasonClient;
     }
 
     public static void setSeasonForWorld(World world, Season season) {
@@ -69,7 +51,7 @@ public class SeasonHandler {
         }
 
         if (world.isRemote) {
-            return currentSeasonClient;
+            return ClientSeasonHandler.getCurrentSeason();
         }
 
         // Unknown world types (e.g. fake worlds from other mods) have no season

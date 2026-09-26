@@ -4,13 +4,13 @@ import java.awt.*;
 
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.darkshadow44.seasonalhorizons.season.ClientSeasonHandler;
 import com.darkshadow44.seasonalhorizons.season.Season;
-import com.darkshadow44.seasonalhorizons.season.SeasonHandler;
 
 public class ColorHandler {
 
     public static int updateColorFoliage(BiomeGenBase biome, int originalColor) {
-        Season season = SeasonHandler.getCurrentClientSeason();
+        Season season = ClientSeasonHandler.getCurrentSeason();
         if (season == null) {
             return originalColor;
         }
@@ -18,7 +18,7 @@ public class ColorHandler {
     }
 
     public static int updateColorGrass(BiomeGenBase biome, int originalColor) {
-        Season season = SeasonHandler.getCurrentClientSeason();
+        Season season = ClientSeasonHandler.getCurrentSeason();
         if (season == null) {
             return originalColor;
         }
