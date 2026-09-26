@@ -150,8 +150,7 @@ public class SnowHandler {
                 world.markBlockForUpdate(x, y, z);
             }
             if (y > 0 && chunk.getBlock(relX, y - 1, relZ) == Blocks.ice) {
-                chunk.func_150807_a(relX, y - 1, relZ, Blocks.water, 0);
-                world.markBlockForUpdate(x, y - 1, z);
+                meltIce(x, y - 1, z);
             }
             // Snow under trees
             boolean cont = true;
@@ -164,6 +163,16 @@ public class SnowHandler {
                     world.markBlockForUpdate(x, y, z);
                 }
             }
+        }
+    }
+
+    // Same result as vanilla ice melting from light
+    private void meltIce(int x, int y, int z) {
+        Blocks.ice.dropBlockAsItem(world, x, y, z, world.getBlockMetadata(x, y, z), 0);
+        if (world.provider.isHellWorld) {
+            world.setBlockToAir(x, y, z);
+        } else {
+            world.setBlock(x, y, z, Blocks.water);
         }
     }
 
