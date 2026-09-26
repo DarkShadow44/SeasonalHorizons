@@ -25,7 +25,6 @@ public class CommonProxy {
         FMLCommonHandler.instance()
             .bus()
             .register(this);
-        MinecraftForge.EVENT_BUS.register(this);
         Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
         NetworkHandler.register();
     }
