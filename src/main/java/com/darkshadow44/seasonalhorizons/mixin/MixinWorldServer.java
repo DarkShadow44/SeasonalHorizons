@@ -1,11 +1,13 @@
 package com.darkshadow44.seasonalhorizons.mixin;
 
+import net.minecraft.block.Block;
 import net.minecraft.profiler.Profiler;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.WorldSettings;
+import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.storage.ISaveHandler;
 import net.minecraft.world.storage.MapStorage;
@@ -20,6 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.darkshadow44.seasonalhorizons.Config;
 import com.darkshadow44.seasonalhorizons.save.IMixinWorldServer;
 import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
+import com.darkshadow44.seasonalhorizons.season.SeasonHandler;
 import com.darkshadow44.seasonalhorizons.season.SnowHandler;
 
 @Mixin(WorldServer.class)
@@ -64,6 +67,20 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
         at = @At(value = "INVOKE", target = "Lnet/minecraft/world/WorldServer;isBlockFreezableNaturally(III)Z"))
     private boolean stopFreezing(WorldServer instance, int x, int y, int z) {
         return seasonalHorizons$snowHandler == null && instance.isBlockFreezableNaturally(x, y, z);
+    }
+
+    @Redirect(
+        method = "func_147456_g",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/block/Block;fillWithRain(Lnet/minecraft/world/World;III)V"))
+    private void fillWithRain(Block block, World world, int x, int y, int z) {
+        // Vanilla only checks whether the biome can rain, so cauldrons would fill while it snows seasonally
+        if (seasonalHorizons$snowHandler != null) {
+            BiomeGenBase biome = world.getBiomeGenForCoords(x, z);
+            if (SeasonHandler.getAdjustedTemperature(world, biome, x, y + 1, z) < 0.15F) {
+                return;
+            }
+        }
+        block.fillWithRain(world, x, y, z);
     }
 
     @Redirect(
