@@ -269,7 +269,7 @@ public class SnowHandler {
 
     public void processChunk(Chunk chunk, long lastUpdateTime) {
         processChunkPartial(chunk, lastUpdateTime, 0, 16, 0, 16);
-        ((IMixinChunk) chunk).seasonalHorizons$setLastUpdateTime(world.getTotalWorldTime());
+        ((IMixinChunk) chunk).seasonalHorizons$setLastUpdateTime(seasonWorldData.seasonTime);
     }
 
     /**
@@ -289,7 +289,7 @@ public class SnowHandler {
     public void handleSnowServerTick(Chunk chunk) {
         // Chunks can stay loaded outside the active set; catch up what they missed when they re-enter it
         IMixinChunk mixinChunk = (IMixinChunk) chunk;
-        long tick = world.getTotalWorldTime();
+        long tick = seasonWorldData.seasonTime;
         long lastUpdateTime = mixinChunk.seasonalHorizons$getLastUpdateTime();
         if (lastUpdateTime < tick - 1) {
             processChunk(chunk, lastUpdateTime);
@@ -323,6 +323,8 @@ public class SnowHandler {
     }
 
     public void handleSnowServerGlobal() {
+        seasonWorldData.seasonTime++;
+
         // Resolve a season boundary before updating either the global pattern or active chunks.
         if (seasonWorldData.seasonTicks >= Config.getSubseasonLength()) {
             seasonWorldData.seasonTicks = 0;
@@ -343,7 +345,7 @@ public class SnowHandler {
             }
         }
 
-        long tick = world.getTotalWorldTime();
+        long tick = seasonWorldData.seasonTime;
         boolean winter = seasonWorldData.season.isWinter();
 
         for (int chunk = 0; chunk < 256; chunk++) {

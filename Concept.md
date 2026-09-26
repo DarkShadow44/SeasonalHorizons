@@ -27,29 +27,30 @@ Season Snow Logic:
 - Each schedule spans a configurable maximum number of ticks. Every column appears four times, distributed pseudo-randomly across the schedule; several appearances may fall on the same tick.
 - On each tick, the scheduled columns update their state in the global pattern and in the chunks currently included in Minecraft's active tick set.
 - Other chunks catch up when they are loaded, populated, or re-enter the active tick set.
-- Each position in the repeating pattern tracks four world-time timestamps:
+- Each dimension with seasons has its own season time, a tick counter that advances only while the dimension is loaded. All snow/thaw timestamps and chunk update times use it, so a dimension that was unloaded continues where it stopped without any catch-up.
+- Each position in the repeating pattern tracks four season-time timestamps:
     - The latest precipitation tick in any season.
     - The latest precipitation tick during winter.
     - The latest thaw-processing tick in any season.
     - The latest thaw-processing tick outside winter.
-- Each unloaded chunk stores the world time at which it was unloaded.
+- Each chunk stores the season time at which its snow state was last brought up to date.
 - Newly generated chunks catch up with the global snow state after terrain population. Snow and ice created by world generation are not suppressed; the catch-up corrects them afterwards.
-- When a chunk is loaded or populated, each column catches up by comparing the chunk's stored unload time directly with the relevant timestamps:
+- When a chunk catches up, each column compares the chunk's stored update time directly with the relevant timestamps:
     - Permanent-snow columns use the latest precipitation timestamp from any season.
     - Permanent-thaw columns use the latest thaw-processing timestamp from any season.
     - Normal columns compare the latest winter precipitation with the latest non-winter thaw-processing timestamp; the newer event determines whether snow is added or removed.
-    - A column is changed only when the relevant event happened after the chunk's stored unload time.
+    - A column is changed only when the relevant event happened after the chunk's stored update time.
 
 # Distant Horizons
 
 - Distant Horizons (DH) snow uses the same repeating 256×256 pattern and the same four snow/thaw timestamps as normal terrain.
-- The server synchronizes the timestamp grids to the client when the player connects or changes dimensions. The client keeps them current as snow and thaw processing advances.
+- The server synchronizes the timestamp grids and the dimension's season time to the client when the player connects or changes dimensions. The client keeps them current as snow and thaw processing advances.
 - When DH captures full-resolution terrain, a non-rendered synthetic marker is added above a surface where Minecraft permits snow placement. An existing snow layer serves as both the current snow state and proof that the surface is snowable, so it does not need a separate marker.
 - DH render data retains the snow information needed for each rendered surface:
     - Whether the source data already contained a snow layer.
     - Whether a snow layer or synthetic marker identifies the surface as snowable.
     - Whether the column is permanent snow, permanent thaw, or normal.
-    - The world time when the LOD data last reflected the full-resolution world.
+    - The season time when the LOD data last reflected the full-resolution world.
 - The client uploads the timestamp grids to repeating GPU textures. Each LOD surface uses its world position to sample the matching entry.
 - The shader compares the LOD surface's last-update time with the relevant snow and thaw timestamps, using the same catch-up rules as a loaded chunk. Existing snow remains until a newer thaw event removes it, and eligible surfaces gain snow only after a newer applicable precipitation event.
 - Snow is rendered as a visual covering on the affected LOD surface without modifying the stored DH terrain or rebuilding every visible LOD chunk.

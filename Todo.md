@@ -15,6 +15,7 @@
 - Replace the prototype's topmost-rendered-surface approximation with snow eligibility derived from the synthetic marker or an existing snow layer.
 - Store the real last-update time in DH render data; the prototype patch currently writes zero into every vertex.
 - Synchronize the four snow/thaw timestamp grids to clients and upload updates to the DH shader on login, dimension change, and subsequent snow/thaw progress.
+- Synchronize the dimension's season time to clients alongside the timestamp grids and keep it in step, so LOD last-update times are recorded in season time rather than world time.
 - Compare complete 64-bit timestamps in the DH shader; the prototype patch carries high and low halves but compares only the low halves.
 - Add DH snow metadata without replacing vertex attributes required by DH or Iris.
 - Ensure snow-sensitive DH surfaces are not merged in ways that discard snow boundaries.

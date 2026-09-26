@@ -11,6 +11,9 @@ public class SeasonWorldData extends WorldSavedData {
 
     public int seasonTicks;
 
+    // Per-dimension clock for snow/thaw timestamps; only advances while the dimension is loaded
+    public long seasonTime;
+
     // Current position in the active snow/thaw schedule
     public int schedulePos;
 
@@ -64,6 +67,7 @@ public class SeasonWorldData extends WorldSavedData {
     public void readFromNBT(NBTTagCompound tag) {
         season = Season.values()[tag.getByte("season")];
         seasonTicks = tag.getInteger("seasonTicks");
+        seasonTime = tag.getLong("seasonTime");
         schedulePos = tag.getInteger("schedulePos");
         scheduleInitialized = tag.getBoolean("scheduleInitialized");
         scheduleRaining = tag.getBoolean("scheduleRaining");
@@ -78,6 +82,7 @@ public class SeasonWorldData extends WorldSavedData {
     public void writeToNBT(NBTTagCompound tag) {
         tag.setByte("season", (byte) season.ordinal());
         tag.setInteger("seasonTicks", seasonTicks);
+        tag.setLong("seasonTime", seasonTime);
         tag.setInteger("schedulePos", schedulePos);
         tag.setBoolean("scheduleInitialized", scheduleInitialized);
         tag.setBoolean("scheduleRaining", scheduleRaining);
