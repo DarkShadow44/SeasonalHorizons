@@ -245,8 +245,8 @@ public class SnowHandler {
         return Math.max(chunk.getPrecipitationHeight(relX, relZ), 0);
     }
 
-    // Writes go straight to the chunk for speed and so no neighbour updates load adjacent chunks
-    private void processBlock(Chunk chunk, int x, int z, boolean snow) {
+    // Writes go straight to the chunk for speed and so no neighbour updates load adjacent chunks.
+    private void processColumn(Chunk chunk, int x, int z, boolean snow) {
         int y = getSurfaceHeight(chunk, x & 0xf, z & 0xf);
         if (snow) {
             processBlockPlaceIce(chunk, x, y - 1, z);
@@ -300,25 +300,25 @@ public class SnowHandler {
 
                 if (isPermaThaw) {
                     if (lastThawTicksAny[index] > lastUpdateTime) {
-                        processBlock(chunk, x, z, false);
+                        processColumn(chunk, x, z, false);
                     }
                     continue;
                 }
 
                 if (isPermaSnow) {
                     if (lastSnowTicksAny[index] > lastUpdateTime) {
-                        processBlock(chunk, x, z, true);
+                        processColumn(chunk, x, z, true);
                     }
                     continue;
                 }
 
                 if (lastThawTicksSummer[index] > lastSnowTicksWinter[index]) {
                     if (lastThawTicksSummer[index] > lastUpdateTime) {
-                        processBlock(chunk, x, z, false);
+                        processColumn(chunk, x, z, false);
                     }
                 } else {
                     if (lastSnowTicksWinter[index] > lastUpdateTime) {
-                        processBlock(chunk, x, z, true);
+                        processColumn(chunk, x, z, true);
                     }
                 }
             }
@@ -370,10 +370,10 @@ public class SnowHandler {
 
             if (canSnow) {
                 if (world.isRaining()) {
-                    processBlock(chunk, x, z, true);
+                    processColumn(chunk, x, z, true);
                 }
             } else {
-                processBlock(chunk, x, z, false);
+                processColumn(chunk, x, z, false);
             }
         }
 
