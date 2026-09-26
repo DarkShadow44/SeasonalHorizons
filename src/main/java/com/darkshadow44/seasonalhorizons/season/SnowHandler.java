@@ -39,6 +39,7 @@ public class SnowHandler {
             seasonWorldData.scheduleInitialized = true;
             seasonWorldData.scheduleRaining = world.isRaining();
             seasonWorldData.scheduleSeed = createScheduleSeed(world.getTotalWorldTime(), world.isRaining());
+            // -1 is safe: handleSnowServerGlobal runs before handleSnowServerTick each tick and advances it first
             seasonWorldData.schedulePos = -1;
             seasonWorldData.markDirty();
         } else if (seasonWorldData.schedulePos < 0 || seasonWorldData.schedulePos >= MAX_TICKS_FOR_CHUNK_UPDATE) {
