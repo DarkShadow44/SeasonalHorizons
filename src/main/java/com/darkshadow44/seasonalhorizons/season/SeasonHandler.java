@@ -9,6 +9,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.darkshadow44.seasonalhorizons.mixin.client.AccessorForgeHooksClient;
 import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
 import com.darkshadow44.seasonalhorizons.save.IMixinWorldServer;
 import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
@@ -37,6 +38,7 @@ public class SeasonHandler {
             return;
         }
         currentSeasonClient = season;
+        AccessorForgeHooksClient.setSkyInit(false);
         Minecraft.getMinecraft().renderGlobal.loadRenderers();
     }
 

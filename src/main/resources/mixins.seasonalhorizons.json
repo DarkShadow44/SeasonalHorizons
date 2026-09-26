@@ -11,6 +11,8 @@
     "MixinEntitySnowman"
   ],
   "client": [
-    "client.MixinEntityRenderer"
+    "client.AccessorForgeHooksClient",
+    "client.MixinEntityRenderer",
+    "client.MixinForgeHooksClient"
   ]
 }
