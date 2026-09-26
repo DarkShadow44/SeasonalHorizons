@@ -120,62 +120,78 @@ public class SnowHandler {
         return (chunkX << 4) + chunkZ;
     }
 
-    // Writes go straight to the chunk for speed and so no neighbour updates load adjacent chunks
-    private void processBlock(Chunk chunk, int x, int z, boolean snow) {
+
+    private void processBlockPlaceSnow(Chunk chunk, int x, int y, int z) {
+        if (world.func_147478_e(x, y, z, true)) {
+            chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.snow_layer, 0);
+            world.markBlockForUpdate(x, y, z);
+        }
+    }
+
+    private void processBlockRemoveSnow(Chunk chunk, int x, int y, int z) {
+        if (chunk.getBlock(x & 0xf, y, z & 0xf) == Blocks.snow_layer) {
+            chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.air, 0);
+            world.markBlockForUpdate(x, y, z);
+        }
+    }
+
+    private void processBlockPlaceIce(Chunk chunk, int x, int y, int z) {
+        // False freezes the water independent of neighbors
+        if (world.canBlockFreeze(x, y, z, false)) {
+            chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.ice, 0);
+            world.markBlockForUpdate(x, y, z);
+        }
+    }
+
+    private void processBlockRemoveIce(Chunk chunk, int x, int y, int z) {
         int relX = x & 0xf;
         int relZ = z & 0xf;
-        int y = chunk.getHeightValue(relX, relZ);
+        if (y <= 0 || chunk.getBlock(relX, y, relZ) != Blocks.ice) {
+            return;
+        }
+        // Don't melt floating ice; liquid counts so frozen deep water still melts
+        Material below = chunk.getBlock(relX, y - 1, relZ).getMaterial();
+        if (below.blocksMovement() || below.isLiquid()) {
+            // Same result as vanilla ice melting from light
+            Blocks.ice.dropBlockAsItem(world, x, y, z, world.getBlockMetadata(x, y, z), 0);
+            Block melted = world.provider.isHellWorld ? Blocks.air : Blocks.water;
+            chunk.func_150807_a(relX, y, relZ, melted, 0);
+            world.markBlockForUpdate(x, y, z);
+            // Update only the water itself so it starts flowing; notifying neighbours could load adjacent chunks
+            world.notifyBlockOfNeighborChange(x, y, z, Blocks.ice);
+        }
+    }
+
+    // Walks down through leaves and air; optionally removes snow on the way, including on the ground itself
+    private int findGroundBelowCanopy(Chunk chunk, int x, int y, int z, boolean removeSnow) {
+        boolean cont = true;
+        while (cont && y > 0) {
+            y--;
+            Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
+            cont = block instanceof BlockLeavesBase || block.isAir(world, x, y, z);
+            if (removeSnow) {
+                processBlockRemoveSnow(chunk, x, y, z);
+            }
+        }
+        return y;
+    }
+
+    // Writes go straight to the chunk for speed and so no neighbour updates load adjacent chunks
+    private void processBlock(Chunk chunk, int x, int z, boolean snow) {
+        int y = chunk.getHeightValue(x & 0xf, z & 0xf);
         if (snow) {
-            // Freeze the whole surface at once so the result doesn't depend on processing order
-            if (world.canBlockFreeze(x, y - 1, z, false)) {
-                chunk.func_150807_a(relX, y - 1, relZ, Blocks.ice, 0);
-                world.markBlockForUpdate(x, y - 1, z);
-            }
-            if (world.func_147478_e(x, y, z, true)) {
-                chunk.func_150807_a(relX, y, relZ, Blocks.snow_layer, 0);
-                world.markBlockForUpdate(x, y, z);
-            }
-            // Snow under trees
-            boolean cont = true;
-            while (cont && y > 0) {
-                y--;
-                Block block = chunk.getBlock(relX, y, relZ);
-                cont = block instanceof BlockLeavesBase || block.isAir(world, x, y, z);
-            }
-            if (world.func_147478_e(x, y + 1, z, true)) {
-                chunk.func_150807_a(relX, y + 1, relZ, Blocks.snow_layer, 0);
-                world.markBlockForUpdate(x, y + 1, z);
-            }
+            processBlockPlaceIce(chunk, x, y - 1, z);
+            processBlockPlaceSnow(chunk, x, y, z);
+            // Snow and ice under trees
+            y = findGroundBelowCanopy(chunk, x, y, z, false);
+            processBlockPlaceIce(chunk, x, y, z);
+            processBlockPlaceSnow(chunk, x, y + 1, z);
         } else {
-            Block block = chunk.getBlock(relX, y, relZ);
-            if (block == Blocks.snow_layer) {
-                chunk.func_150807_a(relX, y, relZ, Blocks.air, 0);
-                world.markBlockForUpdate(x, y, z);
-            }
-            if (y > 1 && chunk.getBlock(relX, y - 1, relZ) == Blocks.ice) {
-                // Don't melt floating ice; liquid counts so frozen deep water still melts
-                Material below = chunk.getBlock(relX, y - 2, relZ).getMaterial();
-                if (below.blocksMovement() || below.isLiquid()) {
-                    // Same result as vanilla ice melting from light
-                    Blocks.ice.dropBlockAsItem(world, x, y - 1, z, world.getBlockMetadata(x, y - 1, z), 0);
-                    Block melted = world.provider.isHellWorld ? Blocks.air : Blocks.water;
-                    chunk.func_150807_a(relX, y - 1, relZ, melted, 0);
-                    world.markBlockForUpdate(x, y - 1, z);
-                    // Update only the water itself so it starts flowing; notifying neighbours could load adjacent chunks
-                    world.notifyBlockOfNeighborChange(x, y - 1, z, Blocks.ice);
-                }
-            }
-            // Snow under trees
-            boolean cont = true;
-            while (cont && y > 0) {
-                y--;
-                block = chunk.getBlock(relX, y, relZ);
-                cont = block instanceof BlockLeavesBase || block.isAir(world, x, y, z);
-                if (block == Blocks.snow_layer) {
-                    chunk.func_150807_a(relX, y, relZ, Blocks.air, 0);
-                    world.markBlockForUpdate(x, y, z);
-                }
-            }
+            processBlockRemoveSnow(chunk, x, y, z);
+            processBlockRemoveIce(chunk, x, y - 1, z);
+            // Snow and ice under trees
+            y = findGroundBelowCanopy(chunk, x, y, z, true);
+            processBlockRemoveIce(chunk, x, y, z);
         }
     }
 
