@@ -251,15 +251,17 @@ public class SnowHandler {
         if (snow) {
             processBlockPlaceIce(chunk, x, y - 1, z);
             processBlockPlaceSnow(chunk, x, y, z);
-            if (Config.isSnowUnderCanopies()) {
+            if (Config.isWalkCanopies()) {
                 y = findGroundBelowCanopy(chunk, x, y, z, true);
-                processBlockPlaceIce(chunk, x, y, z);
-                processBlockPlaceSnow(chunk, x, y + 1, z);
+                if (Config.isSnowUnderCanopies()) {
+                    processBlockPlaceIce(chunk, x, y, z);
+                    processBlockPlaceSnow(chunk, x, y + 1, z);
+                }
             }
         } else {
             processBlockRemoveSnow(chunk, x, y, z);
             processBlockRemoveIce(chunk, x, y - 1, z);
-            if (Config.isSnowUnderCanopies()) {
+            if (Config.isWalkCanopies()) {
                 y = findGroundBelowCanopy(chunk, x, y, z, false);
                 processBlockRemoveIce(chunk, x, y, z);
             }

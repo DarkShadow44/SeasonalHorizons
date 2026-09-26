@@ -7,6 +7,7 @@ import net.minecraftforge.common.config.Configuration;
 public class Config {
 
     private static int[] seasonDimensions = { 0 };
+    private static boolean walkCanopies = true;
     private static boolean snowUnderCanopies = true;
     private static boolean icicles = true;
     private static float icicleChance = 0.02F;
@@ -24,18 +25,25 @@ public class Config {
                 "Dimension IDs that have seasons. Each dimension keeps and advances its own season.")
             .getIntList();
 
+        walkCanopies = configuration.get(
+            Configuration.CATEGORY_GENERAL,
+            "walkCanopies",
+            true,
+            "Whether columns beneath leaf canopies are processed at all. Required by snowUnderCanopies and icicles. Disabling improves performance; everything beneath canopies then stays as it is.")
+            .getBoolean();
+
         snowUnderCanopies = configuration.get(
             Configuration.CATEGORY_GENERAL,
             "snowUnderCanopies",
             true,
-            "Whether snow and ice form and thaw on the ground beneath leaf canopies. Disabling improves performance; existing snow, ice and icicles there then stay.")
+            "Whether snow and ice form on the ground beneath leaf canopies. Requires walkCanopies. Existing snow and ice there still thaw when disabled.")
             .getBoolean();
 
         icicles = configuration.get(
             Configuration.CATEGORY_GENERAL,
             "icicles",
             true,
-            "Whether icicles form below leaves where snow accumulates. Requires snowUnderCanopies. Existing icicles still thaw when disabled.")
+            "Whether icicles form below leaves where snow accumulates. Requires walkCanopies. Existing icicles still thaw when disabled.")
             .getBoolean();
 
         icicleChance = configuration.getFloat(
@@ -74,6 +82,10 @@ public class Config {
             }
         }
         return false;
+    }
+
+    public static boolean isWalkCanopies() {
+        return walkCanopies;
     }
 
     public static boolean isSnowUnderCanopies() {
