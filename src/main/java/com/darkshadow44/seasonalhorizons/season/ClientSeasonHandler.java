@@ -2,6 +2,7 @@ package com.darkshadow44.seasonalhorizons.season;
 
 import net.minecraft.client.Minecraft;
 
+import com.darkshadow44.seasonalhorizons.ClientProxy;
 import com.darkshadow44.seasonalhorizons.mixin.client.AccessorForgeHooksClient;
 
 // Client-only; must not be referenced from code that runs on a dedicated server
@@ -17,6 +18,9 @@ public class ClientSeasonHandler {
         currentSeason = season;
         AccessorForgeHooksClient.setSkyInit(false);
         Minecraft.getMinecraft().renderGlobal.loadRenderers();
+        if (ClientProxy.distantHorizonsCompat != null) {
+            ClientProxy.distantHorizonsCompat.refreshLods();
+        }
     }
 
     public static void reset() {

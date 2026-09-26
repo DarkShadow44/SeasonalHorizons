@@ -7,7 +7,7 @@
 
 - Each subseason has separate 256×256 color maps for grass and foliage.
 - Grass and foliage colors are selected from the active subseason's maps using the season-adjusted biome temperature and biome rainfall.
-- A subseason change switches to the new color maps immediately and rebuilds all rendered chunks.
+- A subseason change switches to the new color maps immediately and rebuilds all rendered chunks, including Distant Horizons LODs so distant terrain uses the new colors.
 
 Season Snow Logic:
 - Seasons apply to a configurable whitelist of dimensions, defaulting to the Overworld. Each whitelisted dimension keeps and advances its own season. A dimension's season advances only while that dimension is loaded; it pauses while unloaded, so seasons in different dimensions may drift apart. Dimensions outside the whitelist keep vanilla temperatures, colors and snow.

@@ -5,4 +5,11 @@ repositories {
         name = "FalsePattern"
         url = "https://mvn.falsepattern.com/releases/"
     }
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content {
+            includeGroup "maven.modrinth"
+        }
+    }
 }
