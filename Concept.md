@@ -10,7 +10,7 @@
 - A subseason change switches to the new color maps immediately and rebuilds all rendered chunks.
 
 Season Snow Logic:
-- Seasons apply to a configurable whitelist of dimensions, defaulting to the Overworld. Each whitelisted dimension keeps and advances its own season. Dimensions outside the whitelist keep vanilla temperatures, colors and snow.
+- Seasons apply to a configurable whitelist of dimensions, defaulting to the Overworld. Each whitelisted dimension keeps and advances its own season. A dimension's season advances only while that dimension is loaded; it pauses while unloaded, so seasons in different dimensions may drift apart. Dimensions outside the whitelist keep vanilla temperatures, colors and snow.
 - Only care for global weather, local weather comes later.
 - Snow behavior distinguishes winter from all other seasons. Winter lowers the temperature by 0.7. The final season- and altitude-adjusted temperature is clamped to the range -0.5 through 2.0.
 - During global precipitation, snow accumulates where the season- and altitude-adjusted temperature is at or below 0.15. Snow placement follows Minecraft's normal placement rules.

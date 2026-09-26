@@ -7,7 +7,6 @@
 - Make the maximum snow/thaw schedule duration configurable; it is currently hard-coded at 1,000 ticks.
 - Decide whether cached live-chunk biomes should refresh when a chunk's biome changes (world editors, biome-changing mods); they are currently cached until the chunk object is dropped.
 - Decide how precipitation interacts with biomes that normally have no rain (e.g. deserts); some seasons might bring rain there. Seasonal snow currently uses world-wide rain and does not check per-biome precipitation.
-- Decide whether a dimension's season should keep advancing while that dimension is unloaded; it currently pauses and drifts from other dimensions.
 
 ## Distant Horizons
 
