@@ -1,5 +1,6 @@
 package com.darkshadow44.seasonalhorizons;
 
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.terraingen.PopulateChunkEvent;
@@ -35,17 +36,17 @@ public class CommonProxy {
 
     @SubscribeEvent
     public void onDimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
-        NetworkHandler.sendSeasonUpdate(event.player.worldObj);
+        NetworkHandler.sendSeasonUpdate((EntityPlayerMP) event.player);
     }
 
     @SubscribeEvent
     public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        NetworkHandler.sendSeasonUpdate(event.player.worldObj);
+        NetworkHandler.sendSeasonUpdate((EntityPlayerMP) event.player);
     }
 
     @SubscribeEvent
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
-        NetworkHandler.sendSeasonUpdate(event.player.worldObj);
+        NetworkHandler.sendSeasonUpdate((EntityPlayerMP) event.player);
     }
 
     @SubscribeEvent

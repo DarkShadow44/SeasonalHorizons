@@ -1,5 +1,6 @@
 package com.darkshadow44.seasonalhorizons.network;
 
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.world.World;
 
 import com.darkshadow44.seasonalhorizons.SeasonalHorizons;
@@ -21,6 +22,11 @@ public class NetworkHandler {
 
     public static void sendSeasonUpdate(World world) {
         Season season = SeasonHandler.getSeasonForWorld(world);
-        channel.sendToAll(new MessageSeasonChange(world, season));
+        channel.sendToDimension(new MessageSeasonChange(world, season), world.provider.dimensionId);
+    }
+
+    public static void sendSeasonUpdate(EntityPlayerMP player) {
+        Season season = SeasonHandler.getSeasonForWorld(player.worldObj);
+        channel.sendTo(new MessageSeasonChange(player.worldObj, season), player);
     }
 }
