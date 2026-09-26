@@ -55,7 +55,7 @@ public class SnowHandler {
 
     private long createScheduleSeed(long tick, boolean raining) {
         long weatherSalt = raining ? 0x9E3779B97F4A7C15L : 0xC2B2AE3D27D4EB4FL;
-        return new Random(world.getSeed() ^ seasonWorldData.scheduleSeed ^ tick ^ weatherSalt).nextLong();
+        return new Random(world.getSeed() ^ tick ^ weatherSalt).nextLong();
     }
 
     private void generateBlockSchedules(long seed) {
@@ -85,7 +85,7 @@ public class SnowHandler {
 
         for (int repeat = 0; repeat < MAX_BLOCK_REPEAT; repeat++) {
             for (int i = 0; i < 256; i++) {
-                long hash = mix(mix(seed ^ mix(i) ^ mix(repeat)));
+                long hash = mix(seed ^ mix(i) ^ mix(repeat));
                 int slot = (int) (hash % MAX_TICKS_FOR_CHUNK_UPDATE);
                 if (slot < 0) slot += MAX_TICKS_FOR_CHUNK_UPDATE;
 
