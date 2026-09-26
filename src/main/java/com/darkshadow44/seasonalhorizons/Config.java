@@ -8,6 +8,8 @@ public class Config {
 
     private static int[] seasonDimensions = { 0 };
     private static boolean snowUnderCanopies = true;
+    private static boolean icicles = true;
+    private static float icicleChance = 0.02F;
     private static int subseasonLength = 10000;
     private static int snowScheduleLength = 1000;
 
@@ -26,8 +28,23 @@ public class Config {
             Configuration.CATEGORY_GENERAL,
             "snowUnderCanopies",
             true,
-            "Whether snow and ice form and thaw on the ground beneath leaf canopies. Disabling improves performance; existing snow and ice there then stays.")
+            "Whether snow and ice form and thaw on the ground beneath leaf canopies. Disabling improves performance; existing snow, ice and icicles there then stay.")
             .getBoolean();
+
+        icicles = configuration.get(
+            Configuration.CATEGORY_GENERAL,
+            "icicles",
+            true,
+            "Whether icicles form below leaves where snow accumulates. Requires snowUnderCanopies. Existing icicles still thaw when disabled.")
+            .getBoolean();
+
+        icicleChance = configuration.getFloat(
+            "icicleChance",
+            Configuration.CATEGORY_GENERAL,
+            0.02F,
+            0.0F,
+            1.0F,
+            "Fraction of columns in which icicles form below leaves.");
 
         subseasonLength = configuration.getInt(
             "subseasonLength",
@@ -61,6 +78,14 @@ public class Config {
 
     public static boolean isSnowUnderCanopies() {
         return snowUnderCanopies;
+    }
+
+    public static boolean isIcicles() {
+        return icicles;
+    }
+
+    public static float getIcicleChance() {
+        return icicleChance;
     }
 
     public static int getSubseasonLength() {

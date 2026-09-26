@@ -13,6 +13,7 @@ import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 
 import com.darkshadow44.seasonalhorizons.Config;
+import com.darkshadow44.seasonalhorizons.block.ModBlocks;
 import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
 import com.darkshadow44.seasonalhorizons.save.IMixinChunk;
 import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
@@ -47,12 +48,17 @@ public class SnowHandler {
 
     private final World world;
 
+    // World seed folded to 32 bits for the icicle column hash
+    private final int icicleSeed;
+
     // Saved season data
     SeasonWorldData seasonWorldData;
 
     public SnowHandler(World world, SeasonWorldData seasonWorldData) {
         this.world = world;
         this.seasonWorldData = seasonWorldData;
+        long seed = world.getSeed();
+        this.icicleSeed = mix((int) (seed ^ (seed >>> 32)));
 
         if (!seasonWorldData.scheduleInitialized) {
             seasonWorldData.scheduleInitialized = true;
@@ -198,15 +204,36 @@ public class SnowHandler {
         }
     }
 
-    // Walks down through leaves and air; optionally removes snow on the way, including on the ground itself
-    private int findGroundBelowCanopy(Chunk chunk, int x, int y, int z, boolean removeSnow) {
+    // Fixed per column and world, so the same columns grow icicles every winter
+    private boolean isIcicleColumn(int x, int z) {
+        // Top 24 bits of the hash as a uniform value in [0, 1)
+        float value = (mix(icicleSeed ^ mix(x * 0x9E3779B9 ^ mix(z))) >>> 8) / (float) (1 << 24);
+        return value < Config.getIcicleChance();
+    }
+
+    // Walks down through leaves, air and icicles. When snowing, grows icicles in air directly below leaves
+    // in icicle columns; when thawing, removes snow and icicles on the way, including on the ground itself
+    private int findGroundBelowCanopy(Chunk chunk, int x, int y, int z, boolean snow) {
+        boolean icicles = snow && Config.isIcicles() && isIcicleColumn(x, z);
         boolean cont = true;
         while (cont && y > 0) {
             y--;
             Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
-            cont = block.isLeaves(world, x, y, z) || block.isAir(world, x, y, z);
-            if (removeSnow) {
+            cont = block == ModBlocks.icicle || block.isLeaves(world, x, y, z) || block.isAir(world, x, y, z);
+            if (snow) {
+                if (icicles && block.isAir(world, x, y, z)
+                    && chunk.getSavedLightValue(EnumSkyBlock.Block, x & 0xf, y, z & 0xf) < 10
+                    && chunk.getBlock(x & 0xf, y + 1, z & 0xf)
+                        .isLeaves(world, x, y + 1, z)) {
+                    chunk.func_150807_a(x & 0xf, y, z & 0xf, ModBlocks.icicle, 0);
+                    world.markBlockForUpdate(x, y, z);
+                }
+            } else {
                 processBlockRemoveSnow(chunk, x, y, z);
+                if (block == ModBlocks.icicle) {
+                    chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.air, 0);
+                    world.markBlockForUpdate(x, y, z);
+                }
             }
         }
         return y;
@@ -225,7 +252,7 @@ public class SnowHandler {
             processBlockPlaceIce(chunk, x, y - 1, z);
             processBlockPlaceSnow(chunk, x, y, z);
             if (Config.isSnowUnderCanopies()) {
-                y = findGroundBelowCanopy(chunk, x, y, z, false);
+                y = findGroundBelowCanopy(chunk, x, y, z, true);
                 processBlockPlaceIce(chunk, x, y, z);
                 processBlockPlaceSnow(chunk, x, y + 1, z);
             }
@@ -233,7 +260,7 @@ public class SnowHandler {
             processBlockRemoveSnow(chunk, x, y, z);
             processBlockRemoveIce(chunk, x, y - 1, z);
             if (Config.isSnowUnderCanopies()) {
-                y = findGroundBelowCanopy(chunk, x, y, z, true);
+                y = findGroundBelowCanopy(chunk, x, y, z, false);
                 processBlockRemoveIce(chunk, x, y, z);
             }
         }

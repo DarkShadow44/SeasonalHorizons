@@ -6,6 +6,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.terraingen.PopulateChunkEvent;
 import net.minecraftforge.event.world.ChunkEvent;
 
+import com.darkshadow44.seasonalhorizons.block.ModBlocks;
 import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
 import com.darkshadow44.seasonalhorizons.save.AdditionalChunkData;
 import com.darkshadow44.seasonalhorizons.save.IMixinChunk;
@@ -28,6 +29,7 @@ public class CommonProxy {
             .register(this);
         Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
         NetworkHandler.register();
+        ModBlocks.register();
     }
 
     public void init(FMLInitializationEvent event) {
