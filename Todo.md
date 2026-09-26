@@ -5,7 +5,6 @@
 - Future: gradual grass and foliage color transitions between subseasons instead of changing immediately, possibly via Angelica integration.
 - Future: decide whether cached live-chunk biomes should refresh when a chunk's biome changes (world editors, biome-changing mods); they are currently cached until the chunk object is dropped.
 - Deferred (needs a concept): decide how precipitation interacts with biomes that normally have no rain (e.g. deserts); some seasons might bring rain there. Seasonal snow currently uses world-wide rain and does not check per-biome precipitation.
-- Calculate how long the schedule needs to be for ~1 update per second.
 - Biomes with custom color logic (swamp, mesa, roofed forest, BOP biomes) don't fire Forge's color events, so they keep their own colors but get no seasonal effect. Open idea: redirect the biome color calls in block `colorMultiplier`s and apply a multiplicative tint (`original × seasonal / vanilla colormap`, per channel) — identical to today for normal biomes; modded blocks need their own targets.
 - Icicles: the texture is a placeholder.
 - Future: falling leaf particles in autumn, coloured from the foliage color map.

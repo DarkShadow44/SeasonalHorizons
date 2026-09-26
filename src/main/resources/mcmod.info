@@ -12,8 +12,8 @@
 		"logoFile": "/logo.png",
 		"screenshots": [],
 		"parent": "",
-		"requiredMods": [],
-		"dependencies": [],
+		"requiredMods": ["chunkapi"],
+		"dependencies": ["chunkapi"],
 		"dependants": [],
 		"useDependencyInformation": false
 	}]

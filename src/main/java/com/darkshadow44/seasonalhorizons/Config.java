@@ -16,8 +16,8 @@ public class Config {
     private static boolean leafPiles = true;
     private static float leafPileChance = 0.2F;
     private static String[] leafPileLeaves = DEFAULT_LEAF_PILE_LEAVES;
-    private static int subseasonLength = 10000;
-    private static int snowScheduleLength = 1000;
+    private static int subseasonLength = 120000;
+    private static int snowScheduleLength = 20480;
 
     public static void synchronizeConfiguration(File configFile) {
         Configuration configuration = new Configuration(configFile);
@@ -85,7 +85,7 @@ public class Config {
         subseasonLength = configuration.getInt(
             "subseasonLength",
             Configuration.CATEGORY_GENERAL,
-            10000,
+            120000,
             1,
             Integer.MAX_VALUE,
             "Duration of each subseason in ticks.");
@@ -93,7 +93,7 @@ public class Config {
         snowScheduleLength = configuration.getInt(
             "snowScheduleLength",
             Configuration.CATEGORY_GENERAL,
-            1000,
+            20480,
             1,
             100000,
             "Maximum number of ticks a snow/thaw schedule spans before every column has been updated.");

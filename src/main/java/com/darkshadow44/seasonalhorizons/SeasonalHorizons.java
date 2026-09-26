@@ -15,7 +15,8 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
     modid = SeasonalHorizons.MODID,
     version = Tags.VERSION,
     name = "SeasonalHorizons",
-    acceptedMinecraftVersions = "[1.7.10]")
+    acceptedMinecraftVersions = "[1.7.10]",
+    dependencies = "required-after:chunkapi")
 public class SeasonalHorizons {
 
     public static final String MODID = "seasonalhorizons";
