@@ -45,15 +45,6 @@ public class CommonProxy {
     }
 
     @SubscribeEvent
-    public void onWorldSave(ChunkEvent.Unload event) {
-        if (event.world.isRemote) {
-            return;
-        }
-        IMixinChunk mixinChunk = (IMixinChunk) event.getChunk();
-        mixinChunk.seasonalHorizons$setLastSaveTime(event.world.getTotalWorldTime());
-    }
-
-    @SubscribeEvent
     public void onChunkPopulate(PopulateChunkEvent.Post event) {
         if (event.world.isRemote) {
             return;

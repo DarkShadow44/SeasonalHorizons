@@ -15,6 +15,7 @@ import net.minecraft.world.chunk.Chunk;
 
 import com.darkshadow44.seasonalhorizons.Config;
 import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
+import com.darkshadow44.seasonalhorizons.save.IMixinChunk;
 import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
 
 @SuppressWarnings("ForLoopReplaceableByForEach")
@@ -268,6 +269,7 @@ public class SnowHandler {
 
     public void processChunk(Chunk chunk, long lastUpdateTime) {
         processChunkPartial(chunk, lastUpdateTime, 0, 16, 0, 16);
+        ((IMixinChunk) chunk).seasonalHorizons$setLastSaveTime(world.getTotalWorldTime());
     }
 
     /**
@@ -285,6 +287,14 @@ public class SnowHandler {
     }
 
     public void handleSnowServerTick(Chunk chunk) {
+        // Chunks can stay loaded outside the active set; catch up what they missed when they re-enter it
+        IMixinChunk mixinChunk = (IMixinChunk) chunk;
+        long tick = world.getTotalWorldTime();
+        long lastUpdateTime = mixinChunk.seasonalHorizons$getLastSaveTime();
+        if (lastUpdateTime < tick - 1) {
+            processChunk(chunk, lastUpdateTime);
+        }
+
         int index = getBlockScheduleIndex(chunk.xPosition, chunk.zPosition);
         int[] schedule = chunkSchedules[index][seasonWorldData.schedulePos];
 
@@ -308,6 +318,8 @@ public class SnowHandler {
                 processBlock(chunk, x, z, false);
             }
         }
+
+        mixinChunk.seasonalHorizons$setLastSaveTime(tick);
     }
 
     public void handleSnowServerGlobal() {
