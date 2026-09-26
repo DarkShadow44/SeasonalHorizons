@@ -58,6 +58,12 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
         // Seasonal snow replaces vanilla snow only in dimensions with seasons
         return seasonalHorizons$snowHandler == null && instance.func_147478_e(x, y, z, checkLight);
     }
+
+    @Redirect(
+        method = "func_147456_g",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/world/WorldServer;isBlockFreezableNaturally(III)Z"))
+    private boolean stopFreezing(WorldServer instance, int x, int y, int z) {
+        return seasonalHorizons$snowHandler == null && instance.isBlockFreezableNaturally(x, y, z);
     }
 
     @Redirect(

@@ -16,6 +16,7 @@ Season Snow Logic:
 - During global precipitation, snow accumulates where the season- and altitude-adjusted temperature is at or below 0.15. Snow placement follows Minecraft's normal placement rules.
 - Existing snow thaws where the adjusted temperature is above 0.15. Where the temperature is at or below 0.15 without precipitation, the column remains unchanged, so snow does not thaw in permafrost.
 - Snow accumulation and thawing place and remove physical snow-layer blocks rather than using a texture overlay.
+- Surface water freezes and thaws with the same logic: where snow would accumulate, the topmost water freezes to ice (following Minecraft's normal freezing rules, applied to the whole surface rather than spreading from the shore), and where snow would thaw, surface ice melts back to water. In dimensions with seasons, Minecraft's random freezing is disabled, like its random snowfall.
 - Snow also accumulates on the ground beneath leaf canopies and thaws there under the same conditions.
 - Note: Temperature gets colder the higher a block is, this is accounted for
 - We divide each column into 3 states: Perma snow, perma thaw and normal, normal snows in winter and thaws in other seasons.

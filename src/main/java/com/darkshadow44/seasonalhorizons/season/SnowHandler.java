@@ -123,6 +123,11 @@ public class SnowHandler {
         int relZ = z & 0xf;
         int y = chunk.getHeightValue(relX, relZ);
         if (snow) {
+            // Freeze the whole surface at once so the result doesn't depend on processing order
+            if (world.canBlockFreeze(x, y - 1, z, false)) {
+                chunk.func_150807_a(relX, y - 1, relZ, Blocks.ice, 0);
+                world.markBlockForUpdate(x, y - 1, z);
+            }
             if (world.func_147478_e(x, y, z, true)) {
                 chunk.func_150807_a(relX, y, relZ, Blocks.snow_layer, 0);
                 world.markBlockForUpdate(x, y, z);
@@ -143,6 +148,10 @@ public class SnowHandler {
             if (block == Blocks.snow_layer) {
                 chunk.func_150807_a(relX, y, relZ, Blocks.air, 0);
                 world.markBlockForUpdate(x, y, z);
+            }
+            if (y > 0 && chunk.getBlock(relX, y - 1, relZ) == Blocks.ice) {
+                chunk.func_150807_a(relX, y - 1, relZ, Blocks.water, 0);
+                world.markBlockForUpdate(x, y - 1, z);
             }
             // Snow under trees
             boolean cont = true;
