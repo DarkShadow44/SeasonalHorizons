@@ -42,7 +42,14 @@ public class SeasonHandler {
         if (seasonWorldData.season == season) {
             return;
         }
+        boolean mainSeasonChanged = seasonWorldData.season.getMainSeason() != season.getMainSeason();
         seasonWorldData.changeSeason(season);
+        if (mainSeasonChanged) {
+            SnowHandler snowHandler = ((IMixinWorldServer) world).seasonalHorizons$getSnowHandler();
+            if (snowHandler != null) {
+                snowHandler.requestScheduleReset();
+            }
+        }
         NetworkHandler.sendSeasonUpdate(world);
     }
 

@@ -57,6 +57,9 @@ public class SnowHandler {
     // Saved season data
     SeasonWorldData seasonWorldData;
 
+    // Set by manual season changes and consumed at the start of the next global snow tick
+    private boolean scheduleResetRequested;
+
     public SnowHandler(World world, SeasonWorldData seasonWorldData) {
         this.world = world;
         this.seasonWorldData = seasonWorldData;
@@ -123,6 +126,10 @@ public class SnowHandler {
                 }
             }
         }
+    }
+
+    public void requestScheduleReset() {
+        scheduleResetRequested = true;
     }
 
     private static int mix(int x) {
@@ -456,14 +463,19 @@ public class SnowHandler {
         seasonWorldData.seasonTime++;
 
         // Resolve a season boundary before updating either the global pattern or active chunks.
+        boolean mainSeasonChanged = false;
         if (seasonWorldData.seasonTicks >= Config.getSubseasonLength()) {
             seasonWorldData.seasonTicks = 0;
-            seasonWorldData.changeSeason(seasonWorldData.season.nextSeason());
+            Season previousSeason = seasonWorldData.season;
+            Season nextSeason = previousSeason.nextSeason();
+            mainSeasonChanged = previousSeason.getMainSeason() != nextSeason.getMainSeason();
+            seasonWorldData.changeSeason(nextSeason);
             NetworkHandler.sendSeasonUpdate(world);
         }
 
         boolean raining = world.isRaining();
-        if (raining != seasonWorldData.scheduleRaining) {
+        if (scheduleResetRequested || mainSeasonChanged || raining != seasonWorldData.scheduleRaining) {
+            scheduleResetRequested = false;
             seasonWorldData.scheduleRaining = raining;
             seasonWorldData.scheduleSeed = createScheduleSeed(world.getTotalWorldTime(), raining);
             generateBlockSchedules(seasonWorldData.scheduleSeed);
