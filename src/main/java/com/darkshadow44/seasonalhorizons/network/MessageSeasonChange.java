@@ -40,7 +40,12 @@ public class MessageSeasonChange implements IMessage, IMessageHandler<MessageSea
     public IMessage onMessage(MessageSeasonChange message, MessageContext ctx) {
         if (ctx.side == Side.CLIENT) {
             if (Minecraft.getMinecraft().thePlayer.dimension == message.dimension) {
-                Season season = message.season < 0 ? null : Season.values()[message.season];
+                Season[] seasons = Season.values();
+                // Ignore out-of-range values, e.g. from a mismatched server; -1 means no season
+                if (message.season < -1 || message.season >= seasons.length) {
+                    return null;
+                }
+                Season season = message.season < 0 ? null : seasons[message.season];
                 ClientSeasonHandler.updateSeason(season);
             }
         }
