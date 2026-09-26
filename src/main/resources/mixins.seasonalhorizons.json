@@ -8,6 +8,9 @@
     "MixinChunk",
     "MixinWorld",
     "MixinWorldServer",
-    "MixinBiomeGenBase"
+    "MixinEntitySnowman"
+  ],
+  "client": [
+    "client.MixinEntityRenderer"
   ]
 }

@@ -12,7 +12,7 @@
 Season Snow Logic:
 - Seasonal snow processing applies to the Overworld.
 - Only care for global weather, local weather comes later.
-- Snow behavior distinguishes winter from all other seasons. Winter lowers the temperature by 0.7, and the resulting season-adjusted temperature is clamped to the range -0.5 through 2.0.
+- Snow behavior distinguishes winter from all other seasons. Winter lowers the temperature by 0.7. The final season- and altitude-adjusted temperature is clamped to the range -0.5 through 2.0.
 - During global precipitation, snow accumulates where the season- and altitude-adjusted temperature is at or below 0.15. Snow placement follows Minecraft's normal placement rules.
 - Existing snow thaws where the adjusted temperature is above 0.15. Where the temperature is at or below 0.15 without precipitation, the column remains unchanged, so snow does not thaw in permafrost.
 - Snow accumulation and thawing place and remove physical snow-layer blocks rather than using a texture overlay.

@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
+import net.minecraft.world.biome.BiomeGenBase;
 
 import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
 import com.darkshadow44.seasonalhorizons.save.IMixinWorldServer;
@@ -70,5 +71,13 @@ public class SeasonHandler {
         }
 
         throw new RuntimeException("Failed to get season for world type: " + world.getClass());
+    }
+
+    public static float getAdjustedTemperature(World world, BiomeGenBase biome, int x, int y, int z) {
+        Season season = getSeasonForWorld(world);
+        if (season == null) {
+            return biome.getFloatTemperature(x, y, z);
+        }
+        return season.getAdjustedTemperatureFloat(biome, x, y, z);
     }
 }
