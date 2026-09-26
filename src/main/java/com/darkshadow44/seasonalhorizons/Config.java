@@ -7,6 +7,7 @@ import net.minecraftforge.common.config.Configuration;
 public class Config {
 
     private static int[] seasonDimensions = { 0 };
+    private static boolean snowUnderCanopies = true;
 
     public static void synchronizeConfiguration(File configFile) {
         Configuration configuration = new Configuration(configFile);
@@ -18,6 +19,14 @@ public class Config {
                 new int[] { 0 },
                 "Dimension IDs that have seasons. Each dimension keeps and advances its own season.")
             .getIntList();
+
+        snowUnderCanopies = configuration
+            .get(
+                Configuration.CATEGORY_GENERAL,
+                "snowUnderCanopies",
+                true,
+                "Whether snow and ice form and thaw on the ground beneath leaf canopies. Disabling improves performance; existing snow and ice there then stays.")
+            .getBoolean();
 
         if (configuration.hasChanged()) {
             configuration.save();
@@ -31,5 +40,9 @@ public class Config {
             }
         }
         return false;
+    }
+
+    public static boolean isSnowUnderCanopies() {
+        return snowUnderCanopies;
     }
 }

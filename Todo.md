@@ -3,7 +3,6 @@
 - Make the subseason duration configurable; it is currently hard-coded at 10,000 ticks.
 - Decide whether grass and foliage colors should transition gradually between subseasons instead of changing immediately.
 - Make the maximum snow/thaw schedule duration configurable; it is currently hard-coded at 1,000 ticks.
-- Make snow accumulation beneath leaf canopies configurable.
 - Reimplement the Distant Horizons snow integration as optional Seasonal Horizons mixins instead of maintaining a directly edited DH build.
 - Make the DH integration load only for supported DH versions and remain optional when DH is absent.
 - Carry snow state, snow eligibility, climate category, pattern coordinates, and LOD last-update time through DH data conversion, reduction, quad building, and vertex generation.

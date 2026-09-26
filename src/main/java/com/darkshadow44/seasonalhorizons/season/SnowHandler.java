@@ -12,6 +12,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 
+import com.darkshadow44.seasonalhorizons.Config;
 import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
 import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
 
@@ -120,7 +121,6 @@ public class SnowHandler {
         return (chunkX << 4) + chunkZ;
     }
 
-
     private void processBlockPlaceSnow(Chunk chunk, int x, int y, int z) {
         if (world.func_147478_e(x, y, z, true)) {
             chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.snow_layer, 0);
@@ -182,16 +182,18 @@ public class SnowHandler {
         if (snow) {
             processBlockPlaceIce(chunk, x, y - 1, z);
             processBlockPlaceSnow(chunk, x, y, z);
-            // Snow and ice under trees
-            y = findGroundBelowCanopy(chunk, x, y, z, false);
-            processBlockPlaceIce(chunk, x, y, z);
-            processBlockPlaceSnow(chunk, x, y + 1, z);
+            if (Config.isSnowUnderCanopies()) {
+                y = findGroundBelowCanopy(chunk, x, y, z, false);
+                processBlockPlaceIce(chunk, x, y, z);
+                processBlockPlaceSnow(chunk, x, y + 1, z);
+            }
         } else {
             processBlockRemoveSnow(chunk, x, y, z);
             processBlockRemoveIce(chunk, x, y - 1, z);
-            // Snow and ice under trees
-            y = findGroundBelowCanopy(chunk, x, y, z, true);
-            processBlockRemoveIce(chunk, x, y, z);
+            if (Config.isSnowUnderCanopies()) {
+                y = findGroundBelowCanopy(chunk, x, y, z, true);
+                processBlockRemoveIce(chunk, x, y, z);
+            }
         }
     }
 
