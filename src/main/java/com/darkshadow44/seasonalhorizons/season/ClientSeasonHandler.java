@@ -19,6 +19,10 @@ public class ClientSeasonHandler {
         Minecraft.getMinecraft().renderGlobal.loadRenderers();
     }
 
+    public static void reset() {
+        currentSeason = null;
+    }
+
     public static Season getCurrentSeason() {
         return currentSeason;
     }
