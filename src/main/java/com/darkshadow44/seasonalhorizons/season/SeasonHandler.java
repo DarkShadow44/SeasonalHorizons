@@ -42,8 +42,7 @@ public class SeasonHandler {
         if (seasonWorldData.season == season) {
             return;
         }
-        // Takes effect with the next tick's season time
-        seasonWorldData.changeSeason(season, seasonWorldData.seasonTime + 1);
+        seasonWorldData.changeSeason(season);
         NetworkHandler.sendSeasonUpdate(world);
     }
 
