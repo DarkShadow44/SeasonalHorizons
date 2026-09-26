@@ -48,7 +48,7 @@ public class AdditionalChunkData implements DataManager.ChunkDataManager {
 
     @Override
     public String uninstallMessage() {
-        return "Seasonal Horizons  Season support";
+        return "Seasonal Horizons Season support";
     }
 
     @Override

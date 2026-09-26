@@ -1,7 +1,5 @@
 package com.darkshadow44.seasonalhorizons.color;
 
-import java.awt.*;
-
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.darkshadow44.seasonalhorizons.season.ClientSeasonHandler;
