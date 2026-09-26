@@ -45,7 +45,7 @@ public class ModBlocks {
                 pile = new BlockLeafPile(leaves);
                 String name = Block.blockRegistry.getNameForObject(leaves)
                     .replace(':', '_');
-                GameRegistry.registerBlock(pile, "leaf_pile_" + name);
+                GameRegistry.registerBlock(pile, ItemBlockLeafPile.class, "leaf_pile_" + name);
                 leafPiles.put(leaves, pile);
             }
             pile.enableMeta(meta);

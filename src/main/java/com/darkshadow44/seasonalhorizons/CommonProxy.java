@@ -29,6 +29,7 @@ public class CommonProxy {
             .register(this);
         Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
         NetworkHandler.register();
+        ModItems.register();
         ModBlocks.register();
     }
 

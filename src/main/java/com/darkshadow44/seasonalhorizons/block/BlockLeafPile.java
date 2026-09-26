@@ -1,17 +1,21 @@
 package com.darkshadow44.seasonalhorizons.block;
 
+import java.util.List;
 import java.util.Random;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
+import com.darkshadow44.seasonalhorizons.ModCreativeTabs;
 import com.darkshadow44.seasonalhorizons.SeasonalHorizons;
 
 import cpw.mods.fml.relauncher.Side;
@@ -33,6 +37,7 @@ public class BlockLeafPile extends Block {
         super(Material.vine);
         this.leaves = leaves;
         setBlockName(SeasonalHorizons.MODID + ".leaf_pile");
+        setCreativeTab(ModCreativeTabs.SEASONAL_HORIZONS);
         setHardness(0.1F);
         setStepSound(soundTypeGrass);
         setBlockBounds(0.0F, 0.0F, 0.0F, 1.0F, 0.0625F, 1.0F);
@@ -44,6 +49,17 @@ public class BlockLeafPile extends Block {
 
     public boolean isEnabledMeta(int meta) {
         return enabledMeta[meta & 3];
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void getSubBlocks(Item item, CreativeTabs tab, List items) {
+        for (int meta = 0; meta < enabledMeta.length; meta++) {
+            if (enabledMeta[meta]) {
+                items.add(new ItemStack(item, 1, meta));
+            }
+        }
     }
 
     @Override

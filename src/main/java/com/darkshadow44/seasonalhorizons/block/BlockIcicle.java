@@ -4,11 +4,11 @@ import java.util.Random;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
-import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.world.World;
 
+import com.darkshadow44.seasonalhorizons.ModCreativeTabs;
 import com.darkshadow44.seasonalhorizons.SeasonalHorizons;
 
 // Hangs below leaves; breaks into nothing
@@ -20,7 +20,7 @@ public class BlockIcicle extends Block {
         setBlockTextureName(SeasonalHorizons.MODID + ":icicle");
         setHardness(0.0F);
         setStepSound(soundTypeGlass);
-        setCreativeTab(CreativeTabs.tabDecorations);
+        setCreativeTab(ModCreativeTabs.SEASONAL_HORIZONS);
         setBlockBounds(0.3F, 0.2F, 0.3F, 0.7F, 1.0F, 0.7F);
     }
 
