@@ -341,6 +341,8 @@ public class SnowHandler {
         } else {
             seasonWorldData.schedulePos++;
             if (seasonWorldData.schedulePos >= Config.getSnowScheduleLength()) {
+                seasonWorldData.scheduleSeed = createScheduleSeed(world.getTotalWorldTime(), raining);
+                generateBlockSchedules(seasonWorldData.scheduleSeed);
                 seasonWorldData.schedulePos = 0;
             }
         }

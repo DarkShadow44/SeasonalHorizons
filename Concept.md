@@ -23,7 +23,7 @@ Season Snow Logic:
 - Note: Temperature gets colder the higher a block is, this is accounted for. A column uses the temperature at its topmost surface for all its decisions, including snow and ice beneath leaf canopies.
 - We divide each column into 3 states: Perma snow, perma thaw and normal, normal snows in winter and thaws in other seasons.
 - Snow/Thaw is tracked by a pseudo random 256x256 block pattern. This pattern is repeated over the entire world.
-- Whenever the global raining state starts or stops, a new randomized processing schedule is generated and reset to its first step.
+- Whenever the global raining state starts or stops, or the current schedule reaches its end, a new randomized processing schedule is generated and reset to its first step.
 - Each schedule spans a configurable maximum number of ticks. Every column appears four times, distributed pseudo-randomly across the schedule; several appearances may fall on the same tick.
 - On each tick, the scheduled columns update their state in the global pattern and in the chunks currently included in Minecraft's active tick set.
 - Other chunks catch up when they are loaded, populated, or re-enter the active tick set.
