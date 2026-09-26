@@ -1,6 +1,4 @@
-# Seasonal Horizons 🌱 ☀️ 🍂 ❄️
-
-![A Minecraft landscape across four seasons](seasons2.png)
+# <img src="src/main/resources/logo.png" alt="Seasonal Horizons logo" height="40" align="absmiddle"> Seasonal Horizons 🌱 ☀️ 🍂 ❄️
 
 Seasonal Horizons brings a changing year to Minecraft 1.7.10 and GT New Horizons. Spring, summer, autumn, and winter are each divided into early, mid, and late subseasons, giving the world twelve distinct seasonal looks.
 
@@ -13,6 +11,10 @@ Seasonal Horizons brings a changing year to Minecraft 1.7.10 and GT New Horizons
 - Lays snow beneath leafy canopies as well as on exposed terrain.
 
 Seasonal Horizons is still in development. The intended behavior and technical design live in [Concept.md](Concept.md), while known gaps and upcoming work are tracked in [Todo.md](Todo.md).
+
+## Screenshots
+
+![A Minecraft landscape across four seasons](seasons2.png)
 
 ## License
 
