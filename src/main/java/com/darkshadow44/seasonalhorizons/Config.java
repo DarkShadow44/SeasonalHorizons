@@ -14,7 +14,7 @@ public class Config {
     private static final String[] DEFAULT_LEAF_PILE_LEAVES = { "minecraft:leaves:0", "minecraft:leaves:2",
         "minecraft:leaves2:0", "minecraft:leaves2:1" };
     private static boolean leafPiles = true;
-    private static float leafPileChance = 0.02F;
+    private static float leafPileChance = 0.2F;
     private static String[] leafPileLeaves = DEFAULT_LEAF_PILE_LEAVES;
     private static int subseasonLength = 10000;
     private static int snowScheduleLength = 1000;
@@ -69,7 +69,7 @@ public class Config {
         leafPileChance = configuration.getFloat(
             "leafPileChance",
             Configuration.CATEGORY_GENERAL,
-            0.02F,
+            0.2F,
             0.0F,
             1.0F,
             "Fraction of columns in which leaf piles form beneath leaves.");

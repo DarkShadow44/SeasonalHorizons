@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.IReloadableResourceManager;
 import net.minecraftforge.event.terraingen.BiomeEvent;
 
+import com.darkshadow44.seasonalhorizons.block.RenderLeafPile;
 import com.darkshadow44.seasonalhorizons.color.ColorHandler;
 import com.darkshadow44.seasonalhorizons.color.ResourceReloadListener;
 import com.darkshadow44.seasonalhorizons.season.ClientSeasonHandler;
@@ -20,6 +21,7 @@ public class ClientProxy extends CommonProxy {
         IReloadableResourceManager resourceManager = (IReloadableResourceManager) Minecraft.getMinecraft()
             .getResourceManager();
         resourceManager.registerReloadListener(new ResourceReloadListener());
+        RenderLeafPile.register();
     }
 
     @SubscribeEvent

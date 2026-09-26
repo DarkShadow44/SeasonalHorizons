@@ -17,9 +17,12 @@ import com.darkshadow44.seasonalhorizons.SeasonalHorizons;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-// Leaf litter shaped like a single snow layer; one block per leaf block, metadata matches the leaf metadata
+// Leaf litter: scattered, nearly flat patches of leaves (see RenderLeafPile); one block per leaf block, metadata matches the leaf metadata
 // so textures and colors can be taken from the leaves directly. Breaks into nothing
 public class BlockLeafPile extends Block {
+
+    // Set by the client proxy
+    public static int renderType = -1;
 
     private final Block leaves;
     // Leaf metadata (& 3) that produce piles
@@ -32,7 +35,7 @@ public class BlockLeafPile extends Block {
         setBlockName(SeasonalHorizons.MODID + ".leaf_pile");
         setHardness(0.1F);
         setStepSound(soundTypeGrass);
-        setBlockBounds(0.0F, 0.0F, 0.0F, 1.0F, 0.125F, 1.0F);
+        setBlockBounds(0.0F, 0.0F, 0.0F, 1.0F, 0.0625F, 1.0F);
     }
 
     public void enableMeta(int meta) {
@@ -55,7 +58,7 @@ public class BlockLeafPile extends Block {
         }
     }
 
-    // No collision, like a single snow layer
+    // No collision
     @Override
     public AxisAlignedBB getCollisionBoundingBoxFromPool(World world, int x, int y, int z) {
         return null;
@@ -82,9 +85,8 @@ public class BlockLeafPile extends Block {
     }
 
     @Override
-    @SideOnly(Side.CLIENT)
-    public boolean shouldSideBeRendered(IBlockAccess world, int x, int y, int z, int side) {
-        return side == 1 || super.shouldSideBeRendered(world, x, y, z, side);
+    public int getRenderType() {
+        return renderType;
     }
 
     // Icons belong to the leaves
