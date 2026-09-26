@@ -24,7 +24,7 @@ public class SnowHandler {
     private static final int MAX_TICKS_FOR_CHUNK_UPDATE = 1000;
     private static final int MAX_BLOCK_REPEAT = 4;
 
-    // Of format [(chunkX % 16) << 4 + (chunkY % 16))] [(blockX % 16) << 4 + (blockY % 16)] []
+    // [(chunkX & 15) << 4 | (chunkZ & 15)][tick][] -> block positions ((blockX & 15) << 4 | (blockZ & 15)) to process
     private final int[][][] chunkSchedules = new int[256][MAX_TICKS_FOR_CHUNK_UPDATE][];
 
     private final WeakHashMap<Chunk, BiomeGenBase[]> chunkBiomeCache = new WeakHashMap<>();

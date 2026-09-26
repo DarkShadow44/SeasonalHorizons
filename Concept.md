@@ -17,14 +17,14 @@ Season Snow Logic:
 - Existing snow thaws where the adjusted temperature is above 0.15. Where the temperature is at or below 0.15 without precipitation, the column remains unchanged, so snow does not thaw in permafrost.
 - Snow accumulation and thawing place and remove physical snow-layer blocks rather than using a texture overlay.
 - Surface water freezes and thaws with the same logic: where snow would accumulate, the topmost water freezes to ice (following Minecraft's normal freezing rules, applied to the whole surface rather than spreading from the shore), and where snow would thaw, surface ice melts the way Minecraft melts ice (into water, or into nothing in dimensions where water evaporates). In dimensions with seasons, Minecraft's random freezing is disabled, like its random snowfall.
-- Snow also accumulates on the ground beneath leaf canopies and thaws there under the same conditions.
+- Optionally (configurable for performance, enabled by default), snow also accumulates on the ground beneath leaf canopies and water there freezes, and both thaw there under the same conditions.
 - Snow and ice changes do not trigger block updates in neighbouring blocks, for performance and so that changes at chunk edges never load adjacent chunks. Melted ice is the exception: the resulting water is updated itself so it can flow.
 - Thawing affects all snow layers and ice in the processed positions, including player-placed ones.
-- Note: Temperature gets colder the higher a block is, this is accounted for
+- Note: Temperature gets colder the higher a block is, this is accounted for. A column uses the temperature at its topmost surface for all its decisions, including snow and ice beneath leaf canopies.
 - We divide each column into 3 states: Perma snow, perma thaw and normal, normal snows in winter and thaws in other seasons.
 - Snow/Thaw is tracked by a pseudo random 256x256 block pattern. This pattern is repeated over the entire world.
 - Whenever the global raining state starts or stops, a new randomized processing schedule is generated and reset to its first step.
-- Each schedule spans a configurable maximum number of ticks. Every column appears four times, distributed pseudo-randomly across the schedule. On each tick, the scheduled columns update their state in the global pattern and in the chunks currently included in Minecraft's active weather-tick set. Other chunks catch up when they are loaded or populated.
+- Each schedule spans a configurable maximum number of ticks. Every column appears four times, distributed pseudo-randomly across the schedule; several appearances may fall on the same tick. On each tick, the scheduled columns update their state in the global pattern and in the chunks currently included in Minecraft's active weather-tick set. Other chunks catch up when they are loaded or populated.
 - Each position in the repeating pattern tracks four world-time timestamps:
     - The latest precipitation tick in any season.
     - The latest precipitation tick during winter.
