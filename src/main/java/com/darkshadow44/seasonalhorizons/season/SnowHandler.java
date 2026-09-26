@@ -213,9 +213,15 @@ public class SnowHandler {
         return y;
     }
 
+    // Like vanilla, use the precipitation height: the light height map passes through glass and similar blocks.
+    // Empty columns report -1, clamp so block lookups stay in range
+    private static int getSurfaceHeight(Chunk chunk, int relX, int relZ) {
+        return Math.max(chunk.getPrecipitationHeight(relX, relZ), 0);
+    }
+
     // Writes go straight to the chunk for speed and so no neighbour updates load adjacent chunks
     private void processBlock(Chunk chunk, int x, int z, boolean snow) {
-        int y = chunk.getHeightValue(x & 0xf, z & 0xf);
+        int y = getSurfaceHeight(chunk, x & 0xf, z & 0xf);
         if (snow) {
             processBlockPlaceIce(chunk, x, y - 1, z);
             processBlockPlaceSnow(chunk, x, y, z);
@@ -262,7 +268,7 @@ public class SnowHandler {
                 int x = (chunk.xPosition << 4) + currentX;
                 int z = (chunk.zPosition << 4) + currentZ;
                 BiomeGenBase biome = biomes[(currentX << 4) + currentZ];
-                int y = chunk.getHeightValue(currentX, currentZ);
+                int y = getSurfaceHeight(chunk, currentX, currentZ);
                 boolean isPermaSnow = Season.SUMMER_MID.getAdjustedTemperatureFloat(biome, x, y, z) <= 0.15F;
                 boolean isPermaThaw = Season.WINTER_MID.getAdjustedTemperatureFloat(biome, x, y, z) > 0.15F;
 
@@ -332,7 +338,7 @@ public class SnowHandler {
             int z = (chunk.zPosition << 4) + (blockPos & 0xf);
 
             BiomeGenBase biome = biomes[blockPos];
-            int y = chunk.getHeightValue(blockPos >> 4, blockPos & 0xf);
+            int y = getSurfaceHeight(chunk, blockPos >> 4, blockPos & 0xf);
             float temperature = seasonWorldData.season.getAdjustedTemperatureFloat(biome, x, y, z);
             boolean canSnow = temperature <= 0.15F;
 
