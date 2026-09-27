@@ -24,6 +24,15 @@ Snow and ice are driven by the current season, temperature, altitude, and global
 
 The server and every client must use the same `seasonalhorizons.cfg`. Some options register blocks (for example the list of leaves that produce leaf piles), and a client with different settings cannot join the server.
 
+## Seasons API
+
+`com.darkshadow44.seasonalhorizons.api.SeasonsAPI` provides:
+
+- `getTemperature(World world, BiomeGenBase biome)` — biome base temperature adjusted for the current season.
+- `getTemperature(World world, BiomeGenBase biome, int x, int y, int z)` — temperature at a position, including altitude and the current season. Use the precipitation height for `y` when choosing rain or snow.
+
+In dimensions without seasons, both functions return the corresponding vanilla temperature.
+
 ## Known limitations
 
 - Biomes with their own color logic (swamp, mesa, roofed forest, Biomes O' Plenty biomes) keep their colors and do not change with the seasons.
