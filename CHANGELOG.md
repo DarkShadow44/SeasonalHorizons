@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Flowers bloom in spring in a fraction of open columns and are removed in the other seasons; snow replaces them. Seasonal flowers drop the real flower when harvested, and real flowers are never removed. Configurable with `springFlowers`, `springFlowerChance` and `springFlowerBlocks`.
 - Sleeping through the night advances the season by the skipped ticks. Snow and thaw end up as if the night had passed normally, with rain until it would have stopped on its own. Can be disabled with `sleepAdvancesSeason`.
 - Seasons, snow and thaw pause while no players are online. Can be disabled with `pauseWithoutPlayers`.
 - `subseasonLength` must be at least 12000 ticks and `snowScheduleLength` at least 1000 ticks.

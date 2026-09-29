@@ -14,6 +14,7 @@ import net.minecraft.world.chunk.Chunk;
 
 import com.darkshadow44.seasonalhorizons.Config;
 import com.darkshadow44.seasonalhorizons.block.BlockLeafPile;
+import com.darkshadow44.seasonalhorizons.block.BlockSpringFlower;
 import com.darkshadow44.seasonalhorizons.block.ModBlocks;
 import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
 import com.darkshadow44.seasonalhorizons.save.IMixinChunk;
@@ -53,6 +54,9 @@ public class SnowHandler {
     private final int icicleSeed;
     // Derived from icicleSeed so pile columns differ from icicle columns
     private final int leafPileSeed;
+    // Derived from icicleSeed like leafPileSeed; which columns get flowers, and which flower each gets
+    private final int springFlowerSeed;
+    private final int springFlowerKindSeed;
 
     // Saved season data
     SeasonWorldData seasonWorldData;
@@ -66,6 +70,8 @@ public class SnowHandler {
         long seed = world.getSeed();
         this.icicleSeed = mix((int) (seed ^ (seed >>> 32)));
         this.leafPileSeed = mix(icicleSeed ^ 0x5BD1E995);
+        this.springFlowerSeed = mix(icicleSeed ^ 0x27D4EB2F);
+        this.springFlowerKindSeed = mix(icicleSeed ^ 0x165667B1);
 
         if (!seasonWorldData.scheduleInitialized) {
             seasonWorldData.scheduleInitialized = true;
@@ -167,10 +173,10 @@ public class SnowHandler {
         if (y < 0 || y >= 256 || chunk.getSavedLightValue(EnumSkyBlock.Block, x & 0xf, y, z & 0xf) >= 10) {
             return;
         }
-        // Snow replaces leaf piles
+        // Snow replaces leaf piles and spring flowers
         Block block = chunk.getBlock(x & 0xf, y, z & 0xf);
-        if ((block.getMaterial() == Material.air || block instanceof BlockLeafPile)
-            && Blocks.snow_layer.canPlaceBlockAt(world, x, y, z)) {
+        if ((block.getMaterial() == Material.air || block instanceof BlockLeafPile
+            || block instanceof BlockSpringFlower) && Blocks.snow_layer.canPlaceBlockAt(world, x, y, z)) {
             chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.snow_layer, 0);
             world.markBlockForUpdate(x, y, z);
         }
@@ -217,10 +223,15 @@ public class SnowHandler {
         }
     }
 
+    // Fixed per column and world
+    private static int hashColumn(int seed, int x, int z) {
+        return mix(seed ^ mix(x * 0x9E3779B9 ^ mix(z)));
+    }
+
     // Fixed per column and world, so the same columns are selected every year
     private static boolean isSelectedColumn(int seed, int x, int z, float chance) {
         // Top 24 bits of the hash as a uniform value in [0, 1)
-        float value = (mix(seed ^ mix(x * 0x9E3779B9 ^ mix(z))) >>> 8) / (float) (1 << 24);
+        float value = (hashColumn(seed, x, z) >>> 8) / (float) (1 << 24);
         return value < chance;
     }
 
@@ -318,8 +329,32 @@ public class SnowHandler {
         }
     }
 
+    // Places this column's flower on the surface, in air only. Each column always picks the same flower
+    private void processBlockPlaceSpringFlower(Chunk chunk, int x, int y, int z) {
+        int count = ModBlocks.getSpringFlowerCount();
+        if (count == 0 || !isSelectedColumn(springFlowerSeed, x, z, Config.getSpringFlowerChance())
+            || !chunk.getBlock(x & 0xf, y, z & 0xf)
+                .isAir(world, x, y, z)) {
+            return;
+        }
+        int flower = (hashColumn(springFlowerKindSeed, x, z) >>> 1) % count;
+        BlockSpringFlower block = ModBlocks.getSpringFlower(flower);
+        if (block.canPlaceBlockAt(world, x, y, z)) {
+            chunk.func_150807_a(x & 0xf, y, z & 0xf, block, ModBlocks.getSpringFlowerMeta(flower));
+            world.markBlockForUpdate(x, y, z);
+        }
+    }
+
+    private void processBlockRemoveSpringFlower(Chunk chunk, int x, int y, int z) {
+        if (chunk.getBlock(x & 0xf, y, z & 0xf) instanceof BlockSpringFlower) {
+            chunk.func_150807_a(x & 0xf, y, z & 0xf, Blocks.air, 0);
+            world.markBlockForUpdate(x, y, z);
+        }
+    }
+
     // Writes go straight to the chunk for speed and so no neighbour updates load adjacent chunks.
-    // Leaf piles are handled on thaw only: placed in autumn, removed otherwise; snow replaces them.
+    // Leaf piles and spring flowers are handled on thaw only: piles are placed in autumn and flowers in spring, both
+    // are removed in the other seasons; snow replaces them.
     private void processColumnSnow(Chunk chunk, int x, int z) {
         int y = getSurfaceHeight(chunk, x & 0xf, z & 0xf);
         processBlockPlaceIce(chunk, x, y - 1, z);
@@ -336,6 +371,11 @@ public class SnowHandler {
         int y = getSurfaceHeight(chunk, x & 0xf, z & 0xf);
         processBlockRemoveSnow(chunk, x, y, z);
         processBlockRemoveIce(chunk, x, y - 1, z);
+        if (mainSeason != MainSeason.SPRING) {
+            processBlockRemoveSpringFlower(chunk, x, y, z);
+        } else if (Config.isSpringFlowers()) {
+            processBlockPlaceSpringFlower(chunk, x, y, z);
+        }
         if (Config.isWalkCanopies()) {
             processCanopyThaw(chunk, x, y, z, mainSeason == MainSeason.AUTUMN);
         }

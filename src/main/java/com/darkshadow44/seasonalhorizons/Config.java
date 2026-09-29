@@ -16,6 +16,12 @@ public class Config {
     private static boolean leafPiles = true;
     private static float leafPileChance = 0.2F;
     private static String[] leafPileLeaves = DEFAULT_LEAF_PILE_LEAVES;
+    private static final String[] DEFAULT_SPRING_FLOWER_BLOCKS = { "minecraft:yellow_flower:0",
+        "minecraft:red_flower:0", "minecraft:red_flower:2", "minecraft:red_flower:3", "minecraft:red_flower:4",
+        "minecraft:red_flower:5", "minecraft:red_flower:6", "minecraft:red_flower:7", "minecraft:red_flower:8" };
+    private static boolean springFlowers = true;
+    private static float springFlowerChance = 0.05F;
+    private static String[] springFlowerBlocks = DEFAULT_SPRING_FLOWER_BLOCKS;
     private static int subseasonLength = 120000;
     private static int snowScheduleLength = 20480;
     private static boolean sleepAdvancesSeason = true;
@@ -82,6 +88,28 @@ public class Config {
                 "leafPileLeaves",
                 DEFAULT_LEAF_PILE_LEAVES,
                 "Leaves that produce leaf piles, as modid:name:meta. Only vanilla leaves are supported for now.")
+            .getStringList();
+
+        springFlowers = configuration.get(
+            Configuration.CATEGORY_GENERAL,
+            "springFlowers",
+            true,
+            "Whether flowers bloom on open ground in spring. Existing seasonal flowers are still removed outside spring when disabled.")
+            .getBoolean();
+
+        springFlowerChance = configuration.getFloat(
+            "springFlowerChance",
+            Configuration.CATEGORY_GENERAL,
+            0.05F,
+            0.0F,
+            1.0F,
+            "Fraction of columns in which flowers bloom in spring.");
+
+        springFlowerBlocks = configuration.get(
+            Configuration.CATEGORY_GENERAL,
+            "springFlowerBlocks",
+            DEFAULT_SPRING_FLOWER_BLOCKS,
+            "Flowers that bloom in spring, as modid:name:meta. Each column picks one of them. Seasonal flowers look like the listed block and turn into it when harvested; they are removed in the other seasons, while real flowers are never touched. Only single-block plants are supported.")
             .getStringList();
 
         subseasonLength = configuration.getInt(
@@ -154,6 +182,18 @@ public class Config {
 
     public static String[] getLeafPileLeaves() {
         return leafPileLeaves;
+    }
+
+    public static boolean isSpringFlowers() {
+        return springFlowers;
+    }
+
+    public static float getSpringFlowerChance() {
+        return springFlowerChance;
+    }
+
+    public static String[] getSpringFlowerBlocks() {
+        return springFlowerBlocks;
     }
 
     public static int getSubseasonLength() {

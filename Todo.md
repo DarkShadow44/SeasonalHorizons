@@ -7,7 +7,11 @@
 - Deferred (needs a concept): decide how precipitation interacts with biomes that normally have no rain (e.g. deserts); some seasons might bring rain there. Seasonal snow currently uses world-wide rain and does not check per-biome precipitation.
 - Biomes with custom color logic (swamp, mesa, roofed forest, BOP biomes) don't fire Forge's color events, so they keep their own colors but get no seasonal effect. Open idea: redirect the biome color calls in block `colorMultiplier`s and apply a multiplicative tint (`original × seasonal / vanilla colormap`, per channel) — identical to today for normal biomes; modded blocks need their own targets.
 - Icicles: the texture is a placeholder.
+- Deferred (needs a concept): tropical seasons, e.g. wet and dry seasons for hot biomes instead of the four temperate seasons.
+- Spring flowers: decide whether double plants (sunflower, lilac, rose bush, peony) should be supported; they need two blocks and the list currently supports single-block plants only.
+- Spring flowers: decide whether flowers should also replace tall grass; they currently form in air only, so dense grassland gets fewer flowers.
 - Future: falling leaf particles in autumn, coloured from the foliage color map.
+- Spring flowers: modded flowers in the list have the same registration issue as modded leaves for leaf piles: their seasonal blocks are registered in preInit, when other mods' flowers may not exist yet.
 - Leaf litter piles (autumn only, see Concept.md), open decisions:
     - Modded leaves in the list: pile blocks are registered in preInit, when other mods' leaves may not exist yet.
     - Modded leaves may not use vanilla's metadata layout (type in `meta & 3`, decay flags in bits 4 and 8), may use tile entities, or may read the world in `getIcon`/`colorMultiplier`, which piles delegate to at their own position.

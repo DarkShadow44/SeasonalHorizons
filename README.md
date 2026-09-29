@@ -11,6 +11,7 @@ Seasonal Horizons brings a changing year to Minecraft 1.7.10 and GT New Horizons
 - **Persistent seasonal state:** unloaded, newly generated, and newly active chunks catch up to the events they missed without forcing every chunk to stay loaded.
 - **Sleeping moves the seasons along:** skipping the night with a bed also advances the season, and snow and thaw end up as if the night had passed normally.
 - **Life beneath the canopy:** snow and ice can form beneath leaves, icicles can hang from them wherever snow accumulates, and scattered leaf piles can appear below supported trees in autumn.
+- **Spring flowers:** flowers bloom on open meadows in spring and wilt away as the year goes on. Pick them and they are yours to keep. The flowers are configurable.
 - **Configurable behavior:** most features can be configured - pick only what you like
 
 Snow and ice are driven by the current season, temperature, altitude, and global weather. Cold areas can retain snow year-round, warm areas thaw year-round, and temperate areas follow the winter snow cycle.
@@ -23,7 +24,7 @@ Snow and ice are driven by the current season, temperature, altitude, and global
 
 ## Multiplayer
 
-The server and every client must use the same `seasonalhorizons.cfg`. Some options register blocks (for example the list of leaves that produce leaf piles), and a client with different settings cannot join the server.
+The server and every client must use the same `seasonalhorizons.cfg`. Some options register blocks (for example the list of leaves that produce leaf piles, or the list of spring flowers), and a client with different settings cannot join the server.
 
 ## Seasons API
 
