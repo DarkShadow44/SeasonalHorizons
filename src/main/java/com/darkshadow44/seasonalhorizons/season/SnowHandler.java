@@ -461,7 +461,7 @@ public class SnowHandler {
 
     public void handleSnowServerGlobal() {
         Season previousSeason = seasonWorldData.season;
-        tickGlobal(world.isRaining(), world.getTotalWorldTime());
+        tickGlobal(world.isRaining(), world.getTotalWorldTime(), 1);
         if (seasonWorldData.season != previousSeason) {
             NetworkHandler.sendSeasonUpdate(world);
         }
@@ -486,44 +486,48 @@ public class SnowHandler {
         seasonWorldData.markDirty();
     }
 
-    // Advances the season time
-    private void advanceSeasonClock() {
-        seasonWorldData.seasonTime++;
+    // Advances the season time; only the first tick may start a new subseason
+    private void advanceSeasonClock(int ticks) {
+        seasonWorldData.seasonTime += ticks;
         if (seasonWorldData.seasonTicks >= Config.getSubseasonLength()) {
             seasonWorldData.seasonTicks = 0;
             seasonWorldData.changeSeason(seasonWorldData.season.nextSeason());
         }
-        seasonWorldData.seasonTicks++;
+        seasonWorldData.seasonTicks += ticks;
     }
 
-    // Advances the season and the schedule by one tick and updates the global pattern with its entries
-    private void tickGlobal(boolean raining, long seedTick) {
-        // Resolve a season boundary before updating either the global pattern or active chunks.
+    /**
+     * Advances the season and the schedule by the given number of ticks and updates the global pattern with their
+     * entries. Only the first tick may start a new subseason or schedule; the caller ensures the others don't.
+     */
+    private void tickGlobal(boolean raining, long seedTick, int ticks) {
+        // Resolve a season boundary on the batch's first tick, before updating either the global pattern or active
+        // chunks.
         MainSeason previousMainSeason = seasonWorldData.season.getMainSeason();
-        advanceSeasonClock();
+        advanceSeasonClock(ticks);
         boolean mainSeasonChanged = seasonWorldData.season.getMainSeason() != previousMainSeason;
 
-        if (scheduleResetRequested || mainSeasonChanged || raining != seasonWorldData.scheduleRaining) {
+        if (scheduleResetRequested || mainSeasonChanged
+            || raining != seasonWorldData.scheduleRaining
+            || seasonWorldData.schedulePos + 1 >= Config.getSnowScheduleLength()) {
             scheduleResetRequested = false;
             seasonWorldData.scheduleRaining = raining;
             seasonWorldData.scheduleSeed = createScheduleSeed(seedTick, raining);
             generateBlockSchedules(seasonWorldData.scheduleSeed);
-            seasonWorldData.schedulePos = 0;
-        } else {
-            seasonWorldData.schedulePos++;
-            if (seasonWorldData.schedulePos >= Config.getSnowScheduleLength()) {
-                seasonWorldData.scheduleSeed = createScheduleSeed(seedTick, raining);
-                generateBlockSchedules(seasonWorldData.scheduleSeed);
-                seasonWorldData.schedulePos = 0;
-            }
+            // The batch's first tick is the new schedule's first step
+            seasonWorldData.schedulePos = -1;
         }
 
+        int start = scheduleTickStart[seasonWorldData.schedulePos + 1];
+        seasonWorldData.schedulePos += ticks;
+        int end = scheduleTickStart[seasonWorldData.schedulePos + 1];
+
+        // All entries of the batch get its last tick. Nothing is compared against a time within the batch, and the
+        // season and the rain are the same throughout it, so the outcome matches stamping each entry with its own tick
         long tick = seasonWorldData.seasonTime;
         boolean winter = seasonWorldData.season.isWinter();
         boolean autumn = seasonWorldData.season.isAutumn();
 
-        int start = scheduleTickStart[seasonWorldData.schedulePos];
-        int end = scheduleTickStart[seasonWorldData.schedulePos + 1];
         for (int i = start; i < end; i++) {
             // An entry is (chunkIndex << 8) | blockPos, which is also its index into the global pattern
             int pos = scheduleEntries[i];
