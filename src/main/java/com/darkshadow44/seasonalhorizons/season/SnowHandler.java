@@ -320,21 +320,24 @@ public class SnowHandler {
 
     // Writes go straight to the chunk for speed and so no neighbour updates load adjacent chunks.
     // Leaf piles are handled on thaw only: placed in autumn, removed otherwise; snow replaces them.
-    // autumn is the season of the thaw processing being applied and is ignored when snowing
-    private void processColumn(Chunk chunk, int x, int z, boolean snow, boolean autumn) {
+    private void processColumnSnow(Chunk chunk, int x, int z) {
         int y = getSurfaceHeight(chunk, x & 0xf, z & 0xf);
-        if (snow) {
-            processBlockPlaceIce(chunk, x, y - 1, z);
-            processBlockPlaceSnow(chunk, x, y, z);
-            if (Config.isWalkCanopies()) {
-                processCanopySnow(chunk, x, y, z);
-            }
-        } else {
-            processBlockRemoveSnow(chunk, x, y, z);
-            processBlockRemoveIce(chunk, x, y - 1, z);
-            if (Config.isWalkCanopies()) {
-                processCanopyThaw(chunk, x, y, z, autumn);
-            }
+        processBlockPlaceIce(chunk, x, y - 1, z);
+        processBlockPlaceSnow(chunk, x, y, z);
+        if (Config.isWalkCanopies()) {
+            processCanopySnow(chunk, x, y, z);
+        }
+    }
+
+    // thawSeason is the season of the thaw processing being applied, null when unknown (old saves, or a winter thaw
+    // during catch-up); then seasonal blocks are only removed
+    private void processColumnThaw(Chunk chunk, int x, int z, Season thawSeason) {
+        MainSeason mainSeason = thawSeason == null ? null : thawSeason.getMainSeason();
+        int y = getSurfaceHeight(chunk, x & 0xf, z & 0xf);
+        processBlockRemoveSnow(chunk, x, y, z);
+        processBlockRemoveIce(chunk, x, y - 1, z);
+        if (Config.isWalkCanopies()) {
+            processCanopyThaw(chunk, x, y, z, mainSeason == MainSeason.AUTUMN);
         }
     }
 
@@ -348,6 +351,12 @@ public class SnowHandler {
             }
             return ret;
         });
+    }
+
+    // The season of the latest thaw processing outside winter, null when unknown; looked up only for columns that are
+    // processed
+    private Season getLastThawSummerSeason(int index) {
+        return SeasonWorldData.decodeSeason(seasonWorldData.lastThawSummerSeason[index]);
     }
 
     public void processChunkPartial(Chunk chunk, long lastUpdateTime, int minX, int maxX, int minZ, int maxZ) {
@@ -369,22 +378,22 @@ public class SnowHandler {
                 int y = getSurfaceHeight(chunk, currentX, currentZ);
                 boolean isPermaSnow = Season.SUMMER_MID.getAdjustedTemperatureFloat(biome, x, y, z) <= 0.15F;
                 boolean isPermaThaw = Season.WINTER_MID.getAdjustedTemperatureFloat(biome, x, y, z) > 0.15F;
-                boolean lastOutsideWinterThawWasAutumn = seasonWorldData.lastThawSummerWasAutumn[index] != 0;
 
                 if (isPermaThaw) {
                     if (lastThawTicksAny[index] > lastUpdateTime) {
-                        // The autumn flag describes lastThawTicksSummer. A newer winter thaw updates only
-                        // lastThawTicksAny, so require both timestamps to match before applying that flag.
-                        boolean autumn = lastThawTicksAny[index] == lastThawTicksSummer[index]
-                            && lastOutsideWinterThawWasAutumn;
-                        processColumn(chunk, x, z, false, autumn);
+                        // The season describes lastThawTicksSummer. A newer winter thaw updates only
+                        // lastThawTicksAny, so require both timestamps to match before applying that season.
+                        Season thawSeason = lastThawTicksAny[index] == lastThawTicksSummer[index]
+                            ? getLastThawSummerSeason(index)
+                            : null;
+                        processColumnThaw(chunk, x, z, thawSeason);
                     }
                     continue;
                 }
 
                 if (isPermaSnow) {
                     if (lastSnowTicksAny[index] > lastUpdateTime) {
-                        processColumn(chunk, x, z, true, false);
+                        processColumnSnow(chunk, x, z);
                     }
                     continue;
                 }
@@ -393,11 +402,11 @@ public class SnowHandler {
                 // even if lastThawTicksAny has since been overwritten by winter ticks
                 if (lastThawTicksSummer[index] > lastSnowTicksWinter[index]) {
                     if (lastThawTicksSummer[index] > lastUpdateTime) {
-                        processColumn(chunk, x, z, false, lastOutsideWinterThawWasAutumn);
+                        processColumnThaw(chunk, x, z, getLastThawSummerSeason(index));
                     }
                 } else {
                     if (lastSnowTicksWinter[index] > lastUpdateTime) {
-                        processColumn(chunk, x, z, true, false);
+                        processColumnSnow(chunk, x, z);
                     }
                 }
             }
@@ -449,10 +458,10 @@ public class SnowHandler {
 
             if (canSnow) {
                 if (world.isRaining()) {
-                    processColumn(chunk, x, z, true, false);
+                    processColumnSnow(chunk, x, z);
                 }
             } else {
-                processColumn(chunk, x, z, false, seasonWorldData.season.isAutumn());
+                processColumnThaw(chunk, x, z, seasonWorldData.season);
             }
         }
 
@@ -559,7 +568,7 @@ public class SnowHandler {
         // season and the rain are the same throughout it, so the outcome matches stamping each entry with its own tick
         long tick = seasonWorldData.seasonTime;
         boolean winter = seasonWorldData.season.isWinter();
-        boolean autumn = seasonWorldData.season.isAutumn();
+        byte season = SeasonWorldData.encodeSeason(seasonWorldData.season);
 
         for (int i = start; i < end; i++) {
             // An entry is (chunkIndex << 8) | blockPos, which is also its index into the global pattern
@@ -573,7 +582,7 @@ public class SnowHandler {
             seasonWorldData.lastThawTicksAny[pos] = tick;
             if (!winter) {
                 seasonWorldData.lastThawTicksSummer[pos] = tick;
-                seasonWorldData.lastThawSummerWasAutumn[pos] = (byte) (autumn ? 1 : 0);
+                seasonWorldData.lastThawSummerSeason[pos] = season;
             }
         }
     }

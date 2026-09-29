@@ -20,6 +20,8 @@ public enum Season {
     WINTER_MID(MainSeason.WINTER, SubSeason.MID, true),
     WINTER_LATE(MainSeason.WINTER, SubSeason.LATE, true);
 
+    private static final Season[] VALUES = values();
+
     private final MainSeason mainSeason;
     private final SubSeason subSeason;
     private final boolean isWinter;
@@ -30,6 +32,11 @@ public enum Season {
         this.mainSeason = mainSeason;
         this.subSeason = subSeason;
         this.isWinter = isWinter;
+    }
+
+    // Without the array copy of values()
+    public static Season byOrdinal(int ordinal) {
+        return VALUES[ordinal];
     }
 
     public String getId() {
@@ -75,10 +82,6 @@ public enum Season {
         float temperature = getAdjustedTemperature(biome.temperature);
         float rainfall = getAdjustedRainfall(biome.rainfall);
         return colorMapGrass.getColor(temperature, rainfall);
-    }
-
-    public boolean isAutumn() {
-        return mainSeason == MainSeason.AUTUMN;
     }
 
     public boolean isWinter() {

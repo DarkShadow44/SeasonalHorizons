@@ -23,13 +23,32 @@ public class SeasonWorldData extends WorldSavedData {
 
     public final long[] lastSnowTicksWinter = new long[256 * 256];
     public final long[] lastThawTicksSummer = new long[256 * 256];
-    // 1 when the corresponding lastThawTicksSummer event occurred in autumn, 0 otherwise
-    public byte[] lastThawSummerWasAutumn = new byte[256 * 256];
+    // Season of the corresponding lastThawTicksSummer event, see encodeSeason
+    public final byte[] lastThawSummerSeason = new byte[256 * 256];
     public final long[] lastSnowTicksAny = new long[256 * 256];
     public final long[] lastThawTicksAny = new long[256 * 256];
 
     public SeasonWorldData(String name) {
         super(name);
+    }
+
+    // Stored as ordinal + 1, so the default 0 means unknown
+    public static byte encodeSeason(Season season) {
+        return (byte) (season.ordinal() + 1);
+    }
+
+    // null when unknown
+    public static Season decodeSeason(byte season) {
+        return season == 0 ? null : Season.byOrdinal(season - 1);
+    }
+
+    private static byte[] readSeasonByteList(NBTTagCompound tag, String key) {
+        byte[] list = tag.getByteArray(key);
+        if (list.length != 256 * 256) {
+            throw new IllegalStateException(
+                "Invalid season data for " + key + ": expected " + (256 * 256) + " entries, got " + list.length);
+        }
+        return list;
     }
 
     public void changeSeason(Season newSeason) {
@@ -82,13 +101,17 @@ public class SeasonWorldData extends WorldSavedData {
         readSeasonEventList(lastSnowTicksAny, tag, "lastSnowTicksAny");
         readSeasonEventList(lastThawTicksSummer, tag, "lastThawTicksSummer");
         readSeasonEventList(lastThawTicksAny, tag, "lastThawTicksAny");
-        if (tag.hasKey("lastThawSummerWasAutumn")) {
-            lastThawSummerWasAutumn = tag.getByteArray("lastThawSummerWasAutumn");
-            if (lastThawSummerWasAutumn.length != 256 * 256) {
-                throw new IllegalStateException(
-                    "Invalid season data for lastThawSummerWasAutumn: expected " + (256 * 256)
-                        + " entries, got "
-                        + lastThawSummerWasAutumn.length);
+        if (tag.hasKey("lastThawSummerSeason")) {
+            byte[] list = readSeasonByteList(tag, "lastThawSummerSeason");
+            System.arraycopy(list, 0, lastThawSummerSeason, 0, list.length);
+        } else if (tag.hasKey("lastThawSummerWasAutumn")) {
+            // Older saves only recorded autumn, without the subseason, so mid autumn is a best guess; the rest stays
+            // unknown
+            byte[] wasAutumn = readSeasonByteList(tag, "lastThawSummerWasAutumn");
+            for (int i = 0; i < wasAutumn.length; i++) {
+                if (wasAutumn[i] != 0) {
+                    lastThawSummerSeason[i] = encodeSeason(Season.AUTUMN_MID);
+                }
             }
         }
     }
@@ -106,6 +129,6 @@ public class SeasonWorldData extends WorldSavedData {
         writeSeasonEventList(lastSnowTicksAny, tag, "lastSnowTicksAny");
         writeSeasonEventList(lastThawTicksSummer, tag, "lastThawTicksSummer");
         writeSeasonEventList(lastThawTicksAny, tag, "lastThawTicksAny");
-        tag.setByteArray("lastThawSummerWasAutumn", lastThawSummerWasAutumn);
+        tag.setByteArray("lastThawSummerSeason", lastThawSummerSeason);
     }
 }
