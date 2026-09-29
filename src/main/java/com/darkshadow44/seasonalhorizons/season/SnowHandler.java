@@ -459,6 +459,33 @@ public class SnowHandler {
         mixinChunk.seasonalHorizons$setLastUpdateTime(tick);
     }
 
+    public void handleSnowServerGlobal() {
+        Season previousSeason = seasonWorldData.season;
+        tickGlobal(world.isRaining(), world.getTotalWorldTime());
+        if (seasonWorldData.season != previousSeason) {
+            NetworkHandler.sendSeasonUpdate(world);
+        }
+
+        // Record each chunk's range of this tick's entries for the active chunks
+        int start = scheduleTickStart[seasonWorldData.schedulePos];
+        int end = scheduleTickStart[seasonWorldData.schedulePos + 1];
+        int chunk = 0;
+        for (int i = start; i < end; i++) {
+            int entryChunk = scheduleEntries[i] >>> 8;
+            // Entries are ordered by chunk index, so this chunk and any skipped chunks before it (no entries this tick)
+            // start here
+            while (chunk <= entryChunk) {
+                scheduleChunkStart[chunk++] = i;
+            }
+        }
+        // Fill in remaining chunks that don't get processed this tick
+        while (chunk <= 256) {
+            scheduleChunkStart[chunk++] = end;
+        }
+
+        seasonWorldData.markDirty();
+    }
+
     // Advances the season time
     private void advanceSeasonClock() {
         seasonWorldData.seasonTime++;
@@ -469,26 +496,23 @@ public class SnowHandler {
         seasonWorldData.seasonTicks++;
     }
 
-    public void handleSnowServerGlobal() {
+    // Advances the season and the schedule by one tick and updates the global pattern with its entries
+    private void tickGlobal(boolean raining, long seedTick) {
         // Resolve a season boundary before updating either the global pattern or active chunks.
-        Season previousSeason = seasonWorldData.season;
+        MainSeason previousMainSeason = seasonWorldData.season.getMainSeason();
         advanceSeasonClock();
-        boolean mainSeasonChanged = seasonWorldData.season.getMainSeason() != previousSeason.getMainSeason();
-        if (seasonWorldData.season != previousSeason) {
-            NetworkHandler.sendSeasonUpdate(world);
-        }
+        boolean mainSeasonChanged = seasonWorldData.season.getMainSeason() != previousMainSeason;
 
-        boolean raining = world.isRaining();
         if (scheduleResetRequested || mainSeasonChanged || raining != seasonWorldData.scheduleRaining) {
             scheduleResetRequested = false;
             seasonWorldData.scheduleRaining = raining;
-            seasonWorldData.scheduleSeed = createScheduleSeed(world.getTotalWorldTime(), raining);
+            seasonWorldData.scheduleSeed = createScheduleSeed(seedTick, raining);
             generateBlockSchedules(seasonWorldData.scheduleSeed);
             seasonWorldData.schedulePos = 0;
         } else {
             seasonWorldData.schedulePos++;
             if (seasonWorldData.schedulePos >= Config.getSnowScheduleLength()) {
-                seasonWorldData.scheduleSeed = createScheduleSeed(world.getTotalWorldTime(), raining);
+                seasonWorldData.scheduleSeed = createScheduleSeed(seedTick, raining);
                 generateBlockSchedules(seasonWorldData.scheduleSeed);
                 seasonWorldData.schedulePos = 0;
             }
@@ -498,19 +522,11 @@ public class SnowHandler {
         boolean winter = seasonWorldData.season.isWinter();
         boolean autumn = seasonWorldData.season.isAutumn();
 
-        // Update the global pattern and record each chunk's range of this tick's entries for the active chunks
         int start = scheduleTickStart[seasonWorldData.schedulePos];
         int end = scheduleTickStart[seasonWorldData.schedulePos + 1];
-        int chunk = 0;
         for (int i = start; i < end; i++) {
             // An entry is (chunkIndex << 8) | blockPos, which is also its index into the global pattern
             int pos = scheduleEntries[i];
-            int entryChunk = pos >>> 8;
-            // Entries are ordered by chunk index, so this chunk and any skipped chunks before it (no entries this tick)
-            // start here
-            while (chunk <= entryChunk) {
-                scheduleChunkStart[chunk++] = i;
-            }
             if (raining) {
                 seasonWorldData.lastSnowTicksAny[pos] = tick;
                 if (winter) {
@@ -523,11 +539,5 @@ public class SnowHandler {
                 seasonWorldData.lastThawSummerWasAutumn[pos] = (byte) (autumn ? 1 : 0);
             }
         }
-        // Fill in remaining chunks that don't get processed this tick
-        while (chunk <= 256) {
-            scheduleChunkStart[chunk++] = end;
-        }
-
-        seasonWorldData.markDirty();
     }
 }
