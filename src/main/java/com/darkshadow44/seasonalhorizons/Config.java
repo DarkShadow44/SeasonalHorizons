@@ -19,6 +19,7 @@ public class Config {
     private static int subseasonLength = 120000;
     private static int snowScheduleLength = 20480;
     private static boolean sleepAdvancesSeason = true;
+    private static boolean pauseWithoutPlayers = true;
 
     public static void synchronizeConfiguration(File configFile) {
         Configuration configuration = new Configuration(configFile);
@@ -106,6 +107,13 @@ public class Config {
             "Whether sleeping through the night also advances the season and its snow and thaw by the skipped ticks. When disabled, the season does not advance while the night is skipped.")
             .getBoolean();
 
+        pauseWithoutPlayers = configuration.get(
+            Configuration.CATEGORY_GENERAL,
+            "pauseWithoutPlayers",
+            true,
+            "Whether seasons, snow and thaw pause while no players are online. When disabled, they keep advancing in every loaded dimension with seasons, as the world time does.")
+            .getBoolean();
+
         if (configuration.hasChanged()) {
             configuration.save();
         }
@@ -158,5 +166,9 @@ public class Config {
 
     public static boolean isSleepAdvancesSeason() {
         return sleepAdvancesSeason;
+    }
+
+    public static boolean isPauseWithoutPlayers() {
+        return pauseWithoutPlayers;
     }
 }

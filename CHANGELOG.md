@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Sleeping through the night advances the season by the skipped ticks. Snow and thaw end up as if the night had passed normally, with rain until it would have stopped on its own. Can be disabled with `sleepAdvancesSeason`.
+- Seasons, snow and thaw pause while no players are online. Can be disabled with `pauseWithoutPlayers`.
 - `subseasonLength` must be at least 12000 ticks and `snowScheduleLength` at least 1000 ticks.
 
 ## 0.0.2

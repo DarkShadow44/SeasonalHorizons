@@ -37,6 +37,10 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
     @Unique
     private long seasonalHorizons$worldTimeBeforeTick;
 
+    // Decided once per tick at the start of func_147456_g, so the global step and the chunk steps agree
+    @Unique
+    private boolean seasonalHorizons$seasonPaused;
+
     public MixinWorldServer(ISaveHandler p_i45368_1_, String p_i45368_2_, WorldProvider p_i45368_3_,
         WorldSettings p_i45368_4_, Profiler p_i45368_5_) {
         super(p_i45368_1_, p_i45368_2_, p_i45368_3_, p_i45368_4_, p_i45368_5_);
@@ -118,7 +122,7 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
             target = "Lnet/minecraft/world/WorldProvider;canDoRainSnowIce(Lnet/minecraft/world/chunk/Chunk;)Z",
             remap = false))
     private boolean handleSnow(WorldProvider instance, Chunk chunk) {
-        if (seasonalHorizons$snowHandler != null) {
+        if (seasonalHorizons$snowHandler != null && !seasonalHorizons$seasonPaused) {
             seasonalHorizons$snowHandler.handleSnowServerTick(chunk);
         }
         return instance.canDoRainSnowIce(chunk);
@@ -126,7 +130,11 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
 
     @Inject(method = "func_147456_g", at = @At("HEAD"))
     private void handleSnowGlobal(CallbackInfo ci) {
-        if (seasonalHorizons$snowHandler != null) {
+        // Dedicated servers keep ticking loaded dimensions without players; the season time stands still meanwhile,
+        // like while a dimension is unloaded. Forced chunks are not processed either, so nothing needs catching up
+        seasonalHorizons$seasonPaused = Config.isPauseWithoutPlayers() && MinecraftServer.getServer()
+            .getCurrentPlayerCount() == 0;
+        if (seasonalHorizons$snowHandler != null && !seasonalHorizons$seasonPaused) {
             seasonalHorizons$snowHandler.handleSnowServerGlobal();
         }
     }

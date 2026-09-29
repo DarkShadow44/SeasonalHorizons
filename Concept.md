@@ -10,7 +10,7 @@
 - A subseason change switches to the new color maps immediately and rebuilds all rendered chunks, including Distant Horizons LODs so distant terrain uses the new colors.
 
 Season Snow Logic:
-- Seasons apply to a configurable whitelist of dimensions, defaulting to the Overworld. Each whitelisted dimension keeps and advances its own season. A dimension's season advances only while that dimension is loaded; it pauses while unloaded, so seasons in different dimensions may drift apart. Dimensions outside the whitelist keep vanilla temperatures, colors and snow.
+- Seasons apply to a configurable whitelist of dimensions, defaulting to the Overworld. Each whitelisted dimension keeps and advances its own season. A dimension's season advances only while that dimension is loaded; it pauses while unloaded, so seasons in different dimensions may drift apart. Optionally (configurable, enabled by default), all seasons also pause while no players are online on the server. Dimensions outside the whitelist keep vanilla temperatures, colors and snow.
 - Only care for global weather, local weather comes later.
 - Snow behavior distinguishes winter from all other seasons. Winter lowers the temperature by 0.7. The final season- and altitude-adjusted temperature is clamped to the range -0.5 through 2.0.
 - During global precipitation, snow accumulates where the season- and altitude-adjusted temperature is at or below 0.15. Snow placement follows Minecraft's normal placement rules.
@@ -35,7 +35,7 @@ Season Snow Logic:
 - Each schedule spans a configurable maximum number of ticks. Every column appears four times, distributed pseudo-randomly across the schedule; several appearances may fall on the same tick.
 - On each tick, the scheduled columns update their state in the global pattern and in the chunks currently included in Minecraft's active tick set.
 - Other chunks catch up when they are loaded, populated, or re-enter the active tick set.
-- Each dimension with seasons has its own season time, a tick counter that advances only while the dimension is loaded. All snow/thaw timestamps and chunk update times use it, so a dimension that was unloaded continues where it stopped without any catch-up.
+- Each dimension with seasons has its own season time, a tick counter that advances only while the dimension is loaded and its season is not paused. All snow/thaw timestamps and chunk update times use it, so a dimension that was unloaded continues where it stopped without any catch-up.
 - Optionally (configurable, enabled by default), when players sleep through the night in a dimension with seasons, its season time and season advance by the skipped ticks at once, and the snow/thaw pattern ends up as if those ticks had passed normally. It rains during the skipped ticks until the rain would have ended on its own, at most until waking up. Chunks catch up afterwards like after any other gap.
 - Each position in the repeating pattern tracks four season-time timestamps:
     - The latest precipitation tick in any season.
