@@ -459,17 +459,22 @@ public class SnowHandler {
         mixinChunk.seasonalHorizons$setLastUpdateTime(tick);
     }
 
-    public void handleSnowServerGlobal() {
+    // Advances the season time
+    private void advanceSeasonClock() {
         seasonWorldData.seasonTime++;
-
-        // Resolve a season boundary before updating either the global pattern or active chunks.
-        boolean mainSeasonChanged = false;
         if (seasonWorldData.seasonTicks >= Config.getSubseasonLength()) {
             seasonWorldData.seasonTicks = 0;
-            Season previousSeason = seasonWorldData.season;
-            Season nextSeason = previousSeason.nextSeason();
-            mainSeasonChanged = previousSeason.getMainSeason() != nextSeason.getMainSeason();
-            seasonWorldData.changeSeason(nextSeason);
+            seasonWorldData.changeSeason(seasonWorldData.season.nextSeason());
+        }
+        seasonWorldData.seasonTicks++;
+    }
+
+    public void handleSnowServerGlobal() {
+        // Resolve a season boundary before updating either the global pattern or active chunks.
+        Season previousSeason = seasonWorldData.season;
+        advanceSeasonClock();
+        boolean mainSeasonChanged = seasonWorldData.season.getMainSeason() != previousSeason.getMainSeason();
+        if (seasonWorldData.season != previousSeason) {
             NetworkHandler.sendSeasonUpdate(world);
         }
 
@@ -523,7 +528,6 @@ public class SnowHandler {
             scheduleChunkStart[chunk++] = end;
         }
 
-        seasonWorldData.seasonTicks++;
         seasonWorldData.markDirty();
     }
 }
