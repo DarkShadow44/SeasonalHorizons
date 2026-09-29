@@ -36,7 +36,7 @@ Season Snow Logic:
 - On each tick, the scheduled columns update their state in the global pattern and in the chunks currently included in Minecraft's active tick set.
 - Other chunks catch up when they are loaded, populated, or re-enter the active tick set.
 - Each dimension with seasons has its own season time, a tick counter that advances only while the dimension is loaded. All snow/thaw timestamps and chunk update times use it, so a dimension that was unloaded continues where it stopped without any catch-up.
-- When players sleep through the night in a dimension with seasons, its season time and season advance by the skipped ticks at once, and the snow/thaw pattern ends up as if those ticks had passed normally. It rains during the skipped ticks until the rain would have ended on its own, at most until waking up. Chunks catch up afterwards like after any other gap.
+- Optionally (configurable, enabled by default), when players sleep through the night in a dimension with seasons, its season time and season advance by the skipped ticks at once, and the snow/thaw pattern ends up as if those ticks had passed normally. It rains during the skipped ticks until the rain would have ended on its own, at most until waking up. Chunks catch up afterwards like after any other gap.
 - Each position in the repeating pattern tracks four season-time timestamps:
     - The latest precipitation tick in any season.
     - The latest precipitation tick during winter.

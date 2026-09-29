@@ -9,8 +9,9 @@ Seasonal Horizons brings a changing year to Minecraft 1.7.10 and GT New Horizons
 - **A colder winter:** seasonal temperatures let snow settle and surface water freeze in places that remain warm during the rest of the year.
 - **Gradual accumulation and thaw:** physical snow layers and ice spread across the landscape over time instead of appearing everywhere at once, then melt when conditions warm.
 - **Persistent seasonal state:** unloaded, newly generated, and newly active chunks catch up to the events they missed without forcing every chunk to stay loaded.
+- **Sleeping moves the seasons along:** skipping the night with a bed also advances the season, and snow and thaw end up as if the night had passed normally.
 - **Life beneath the canopy:** snow and ice can form beneath leaves, icicles can hang from them wherever snow accumulates, and scattered leaf piles can appear below supported trees in autumn.
-- **Configurable behavior:** choose which dimensions have seasons, set subseason and snow-update timing, and tune or disable canopy snow, icicles, and leaf piles.
+- **Configurable behavior:** most features can be configured - pick only what you like
 
 Snow and ice are driven by the current season, temperature, altitude, and global weather. Cold areas can retain snow year-round, warm areas thaw year-round, and temperate areas follow the winter snow cycle.
 

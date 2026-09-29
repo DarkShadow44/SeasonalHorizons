@@ -18,6 +18,7 @@ public class Config {
     private static String[] leafPileLeaves = DEFAULT_LEAF_PILE_LEAVES;
     private static int subseasonLength = 120000;
     private static int snowScheduleLength = 20480;
+    private static boolean sleepAdvancesSeason = true;
 
     public static void synchronizeConfiguration(File configFile) {
         Configuration configuration = new Configuration(configFile);
@@ -98,6 +99,13 @@ public class Config {
             100000,
             "Maximum number of ticks a snow/thaw schedule spans before every column has been updated.");
 
+        sleepAdvancesSeason = configuration.get(
+            Configuration.CATEGORY_GENERAL,
+            "sleepAdvancesSeason",
+            true,
+            "Whether sleeping through the night also advances the season and its snow and thaw by the skipped ticks. When disabled, the season does not advance while the night is skipped.")
+            .getBoolean();
+
         if (configuration.hasChanged()) {
             configuration.save();
         }
@@ -146,5 +154,9 @@ public class Config {
 
     public static int getSnowScheduleLength() {
         return snowScheduleLength;
+    }
+
+    public static boolean isSleepAdvancesSeason() {
+        return sleepAdvancesSeason;
     }
 }

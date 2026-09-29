@@ -66,7 +66,7 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
     private void skipSleptTicks(CallbackInfo ci) {
         // Sleeping has just moved the world time to the next morning; the season skips the night as well. Waking up
         // stops the rain, so it rains only until the rain would have ended anyway
-        if (seasonalHorizons$snowHandler != null) {
+        if (seasonalHorizons$snowHandler != null && Config.isSleepAdvancesSeason()) {
             long skipped = worldInfo.getWorldTime() - seasonalHorizons$worldTimeBeforeTick;
             if (skipped > 0) {
                 // The flag, not isRaining(): the rain strength lags behind it, and while the rain fades out the rain
