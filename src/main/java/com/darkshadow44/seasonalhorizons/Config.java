@@ -86,7 +86,7 @@ public class Config {
             "subseasonLength",
             Configuration.CATEGORY_GENERAL,
             120000,
-            1,
+            12000,
             Integer.MAX_VALUE,
             "Duration of each subseason in ticks.");
 
@@ -94,7 +94,7 @@ public class Config {
             "snowScheduleLength",
             Configuration.CATEGORY_GENERAL,
             20480,
-            1,
+            1000,
             100000,
             "Maximum number of ticks a snow/thaw schedule spans before every column has been updated.");
 
