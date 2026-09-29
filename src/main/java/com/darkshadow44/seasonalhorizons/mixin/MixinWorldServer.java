@@ -34,6 +34,9 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
     @Unique
     private SeasonWorldData seasonalHorizons$seasonWorldData;
 
+    @Unique
+    private long seasonalHorizons$worldTimeBeforeTick;
+
     public MixinWorldServer(ISaveHandler p_i45368_1_, String p_i45368_2_, WorldProvider p_i45368_3_,
         WorldSettings p_i45368_4_, Profiler p_i45368_5_) {
         super(p_i45368_1_, p_i45368_2_, p_i45368_3_, p_i45368_4_, p_i45368_5_);
@@ -51,6 +54,31 @@ public abstract class MixinWorldServer extends World implements IMixinWorldServe
                 storage.setData(dataName, seasonalHorizons$seasonWorldData);
             }
             seasonalHorizons$snowHandler = new SnowHandler(this, seasonalHorizons$seasonWorldData);
+        }
+    }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void rememberWorldTime(CallbackInfo ci) {
+        seasonalHorizons$worldTimeBeforeTick = worldInfo.getWorldTime();
+    }
+
+    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/WorldServer;wakeAllPlayers()V"))
+    private void skipSleptTicks(CallbackInfo ci) {
+        // Sleeping has just moved the world time to the next morning; the season skips the night as well. Waking up
+        // stops the rain, so it rains only until the rain would have ended anyway
+        if (seasonalHorizons$snowHandler != null) {
+            long skipped = worldInfo.getWorldTime() - seasonalHorizons$worldTimeBeforeTick;
+            if (skipped > 0) {
+                // The flag, not isRaining(): the rain strength lags behind it, and while the rain fades out the rain
+                // time already counts down to the next rain. While raining, the rain time is the ticks left until it
+                // stops; 0 right after the rain started, before vanilla draws its duration (at least 12000 ticks)
+                long rainTicks = 0;
+                if (worldInfo.isRaining()) {
+                    int rainTime = worldInfo.getRainTime();
+                    rainTicks = rainTime > 0 ? Math.min(rainTime, skipped) : skipped;
+                }
+                seasonalHorizons$snowHandler.skipTicks(skipped, rainTicks);
+            }
         }
     }
 

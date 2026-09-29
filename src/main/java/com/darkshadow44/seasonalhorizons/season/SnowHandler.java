@@ -486,6 +486,39 @@ public class SnowHandler {
         seasonWorldData.markDirty();
     }
 
+    /**
+     * Applies ticks the dimension skipped at once (e.g. a night slept through) to the season and the global pattern.
+     * Chunks are left alone and catch up from the pattern like after any other gap.
+     */
+    public void skipTicks(long ticks, long rainTicks) {
+        Season previousSeason = seasonWorldData.season;
+        long done = 0;
+        while (done < ticks) {
+            // It rains during the first rainTicks, so a batch also ends where the rain stops
+            boolean raining = done < rainTicks;
+            long batchEnd = raining ? rainTicks : ticks;
+            // Ticks before the next one starts a new subseason; negative if the subseason length was lowered
+            long subseasonLeft = (long) Config.getSubseasonLength() - seasonWorldData.seasonTicks;
+            // Steps left in the schedule; schedulePos is the last step processed
+            long scheduleLeft = Config.getSnowScheduleLength() - 1 - seasonWorldData.schedulePos;
+            // End the batch where the rain stops or the subseason ends
+            long batchLength = Math.min(batchEnd - done, subseasonLeft);
+            // ... or where the schedule ends
+            batchLength = Math.min(batchLength, scheduleLeft);
+            // When the next tick itself starts a new subseason or schedule, it is a batch of its own; tickGlobal
+            // handles that boundary on its first tick
+            int batch = (int) Math.max(1, batchLength);
+            // World time stands still meanwhile; the season time differs per batch and keeps the schedules apart
+            tickGlobal(raining, seasonWorldData.seasonTime, batch);
+            done += batch;
+        }
+
+        if (seasonWorldData.season != previousSeason) {
+            NetworkHandler.sendSeasonUpdate(world);
+        }
+        seasonWorldData.markDirty();
+    }
+
     // Advances the season time; only the first tick may start a new subseason
     private void advanceSeasonClock(int ticks) {
         seasonWorldData.seasonTime += ticks;
