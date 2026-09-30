@@ -1,18 +1,8 @@
 {
   "package": "com.darkshadow44.seasonalhorizons.mixin",
   "refmap": "seasonalhorizons.refmap.json",
+  "plugin": "com.darkshadow44.seasonalhorizons.mixinplugin.MixinPlugin",
   "target": "@env(DEFAULT)",
   "minVersion": "0.7",
-  "compatibilityLevel": "JAVA_8",
-  "mixins": [
-    "MixinChunk",
-    "MixinWorld",
-    "MixinWorldServer",
-    "MixinEntitySnowman"
-  ],
-  "client": [
-    "client.AccessorForgeHooksClient",
-    "client.MixinEntityRenderer",
-    "client.MixinForgeHooksClient"
-  ]
+  "compatibilityLevel": "JAVA_8"
 }

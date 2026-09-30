@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import com.darkshadow44.seasonalhorizons.season.SeasonHandler;
 
 @Mixin(EntityRenderer.class)
-public class MixinEntityRenderer {
+public class MixinEntityRenderer_RainSnow {
 
     @Shadow
     private Minecraft mc;
