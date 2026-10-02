@@ -9,6 +9,7 @@ Seasonal Horizons brings a changing year to Minecraft 1.7.10 and GT New Horizons
 - **A colder winter:** seasonal temperatures let snow settle and surface water freeze in places that remain warm during the rest of the year.
 - **Gradual accumulation and thaw:** physical snow layers and ice spread across the landscape over time instead of appearing everywhere at once, then melt when conditions warm.
 - **Persistent seasonal state:** unloaded, newly generated, and newly active chunks catch up to the events they missed without forcing every chunk to stay loaded.
+- **Seasons your way:** lock the world to a single season, or let it follow the real-world calendar, with March bringing early spring and February late winter.
 - **Sleeping moves the seasons along:** skipping the night with a bed also advances the season, and snow and thaw end up as if the night had passed normally.
 - **Life beneath the canopy:** snow and ice can form beneath leaves, icicles can hang from them wherever snow accumulates, and scattered leaf piles can appear below supported trees in autumn.
 - **Spring flowers:** flowers bloom on open meadows in spring and wilt away as the year goes on. Pick them and they are yours to keep. The flowers are configurable.
@@ -60,6 +61,8 @@ Server operators can jump directly to a seasonal stage with:
 For example, `/season set early_winter` starts early winter in the current dimension.
 
 `/season get` shows the current season of the dimension and how many Minecraft days are left until the next one.
+
+While the season is locked (`lockedSeason`) or follows the real-world month (`realTimeSeasons`), `/season set` is disabled.
 
 Seasonal Horizons is still in development. The intended behavior and technical design live in [Concept.md](Concept.md), while known gaps and upcoming work are tracked in [Todo.md](Todo.md).
 
