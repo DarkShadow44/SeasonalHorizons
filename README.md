@@ -59,6 +59,8 @@ Server operators can jump directly to a seasonal stage with:
 
 For example, `/season set early_winter` starts early winter in the current dimension.
 
+`/season get` shows the current season of the dimension and how many Minecraft days are left until the next one.
+
 Seasonal Horizons is still in development. The intended behavior and technical design live in [Concept.md](Concept.md), while known gaps and upcoming work are tracked in [Todo.md](Todo.md).
 
 ## Screenshots

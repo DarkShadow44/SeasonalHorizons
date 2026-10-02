@@ -2,6 +2,9 @@
 
 - A year consists of four seasons—spring, summer, autumn, and winter—each divided into early, mid, and late subseasons.
 - Each subseason lasts a configurable number of ticks, after which the cycle advances to the next subseason. After late winter, the cycle returns to early spring.
+- Optionally (configurable, disabled by default), the season is locked to a configured subseason in every dimension with seasons, which then never changes.
+- Optionally (configurable, disabled by default), the season follows the real-world month instead of the tick-based cycle: March is early spring, April mid spring, May late spring, and so on until February, which is late winter. The month is rechecked once a minute. A locked season takes precedence.
+- While the season is locked or follows the real-world month, it cannot be changed with a command.
 
 # Coloring
 

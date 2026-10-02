@@ -4,6 +4,9 @@ import java.io.File;
 
 import net.minecraftforge.common.config.Configuration;
 
+import com.darkshadow44.seasonalhorizons.season.Season;
+import com.darkshadow44.seasonalhorizons.season.SeasonHandler;
+
 public class Config {
 
     private static int[] seasonDimensions = { 0 };
@@ -26,6 +29,9 @@ public class Config {
     private static int snowScheduleLength = 20480;
     private static boolean sleepAdvancesSeason = true;
     private static boolean pauseWithoutPlayers = true;
+    // null when the season is not locked
+    private static Season lockedSeason;
+    private static boolean realTimeSeasons;
 
     public static void synchronizeConfiguration(File configFile) {
         Configuration configuration = new Configuration(configFile);
@@ -142,6 +148,28 @@ public class Config {
             "Whether seasons, snow and thaw pause while no players are online. When disabled, they keep advancing in every loaded dimension with seasons, as the world time does.")
             .getBoolean();
 
+        String lockedSeasonId = configuration.getString(
+            "lockedSeason",
+            Configuration.CATEGORY_GENERAL,
+            "",
+            "Locks every dimension with seasons to this season. Leave empty to let the seasons change. Takes precedence over realTimeSeasons. Valid seasons: "
+                + String.join(", ", SeasonHandler.getSeasonIds()));
+        lockedSeason = null;
+        if (!lockedSeasonId.isEmpty()) {
+            lockedSeason = SeasonHandler.getSeasonById(lockedSeasonId)
+                .orElse(null);
+            if (lockedSeason == null) {
+                SeasonalHorizons.LOG.warn("Ignoring invalid lockedSeason '{}'", lockedSeasonId);
+            }
+        }
+
+        realTimeSeasons = configuration.get(
+            Configuration.CATEGORY_GENERAL,
+            "realTimeSeasons",
+            false,
+            "Whether the season follows the current real-world month instead of subseasonLength, checked once a minute. March is early spring, April mid spring, and so on until February, which is late winter.")
+            .getBoolean();
+
         if (configuration.hasChanged()) {
             configuration.save();
         }
@@ -210,5 +238,13 @@ public class Config {
 
     public static boolean isPauseWithoutPlayers() {
         return pauseWithoutPlayers;
+    }
+
+    public static Season getLockedSeason() {
+        return lockedSeason;
+    }
+
+    public static boolean isRealTimeSeasons() {
+        return realTimeSeasons;
     }
 }

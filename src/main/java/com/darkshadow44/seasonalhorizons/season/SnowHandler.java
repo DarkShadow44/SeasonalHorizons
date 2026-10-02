@@ -571,6 +571,15 @@ public class SnowHandler {
     // Advances the season time; only the first tick may start a new subseason
     private void advanceSeasonClock(int ticks) {
         seasonWorldData.seasonTime += ticks;
+        Season fixedSeason = SeasonHandler.getFixedSeason();
+        if (fixedSeason != null) {
+            // The subseason does not progress while the season is fixed
+            seasonWorldData.seasonTicks = 0;
+            if (seasonWorldData.season != fixedSeason) {
+                seasonWorldData.changeSeason(fixedSeason);
+            }
+            return;
+        }
         if (seasonWorldData.seasonTicks >= Config.getSubseasonLength()) {
             seasonWorldData.seasonTicks = 0;
             seasonWorldData.changeSeason(seasonWorldData.season.nextSeason());

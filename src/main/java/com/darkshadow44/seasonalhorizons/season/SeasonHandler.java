@@ -1,5 +1,6 @@
 package com.darkshadow44.seasonalhorizons.season;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -7,11 +8,39 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.darkshadow44.seasonalhorizons.Config;
 import com.darkshadow44.seasonalhorizons.network.NetworkHandler;
 import com.darkshadow44.seasonalhorizons.save.IMixinWorldServer;
 import com.darkshadow44.seasonalhorizons.save.SeasonWorldData;
 
 public class SeasonHandler {
+
+    private static final long REAL_TIME_CHECK_INTERVAL_NANOS = 60_000_000_000L;
+
+    private static Season realTimeSeason;
+    private static long lastRealTimeCheck;
+
+    /**
+     * The season set by lockedSeason or realTimeSeasons, or null while the seasons cycle normally.
+     */
+    public static Season getFixedSeason() {
+        Season lockedSeason = Config.getLockedSeason();
+        if (lockedSeason != null) {
+            return lockedSeason;
+        }
+        if (!Config.isRealTimeSeasons()) {
+            return null;
+        }
+        long now = System.nanoTime();
+        if (realTimeSeason == null || now - lastRealTimeCheck >= REAL_TIME_CHECK_INTERVAL_NANOS) {
+            lastRealTimeCheck = now;
+            // March is early spring, so February is late winter
+            int month = LocalDate.now()
+                .getMonthValue();
+            realTimeSeason = Season.byOrdinal((month + 9) % 12);
+        }
+        return realTimeSeason;
+    }
 
     public static String[] getSeasonIds() {
         return Arrays.stream(Season.values())
