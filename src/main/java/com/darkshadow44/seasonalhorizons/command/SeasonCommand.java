@@ -7,6 +7,7 @@ import java.util.Optional;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.ChatComponentTranslation;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 
@@ -25,7 +26,7 @@ public class SeasonCommand extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/season <get|set <season name>>";
+        return "commands.seasonalhorizons.season.usage";
     }
 
     @Override
@@ -52,24 +53,23 @@ public class SeasonCommand extends CommandBase {
             }
 
             if (!season.isPresent()) {
-                sender.addChatMessage(new ChatComponentText("Available seasons:"));
+                sender.addChatMessage(new ChatComponentTranslation("commands.seasonalhorizons.season.available"));
                 sender.addChatMessage(new ChatComponentText(String.join(" ", SeasonHandler.getSeasonIds())));
                 return;
             }
 
             if (SeasonHandler.getSeasonForWorld(sender.getEntityWorld()) == null) {
-                sender.addChatMessage(new ChatComponentText("This dimension has no seasons."));
+                sender.addChatMessage(new ChatComponentTranslation("commands.seasonalhorizons.season.noSeasons"));
                 return;
             }
 
             if (Config.getLockedSeason() != null) {
-                sender.addChatMessage(new ChatComponentText("The season is locked (lockedSeason in the config)."));
+                sender.addChatMessage(new ChatComponentTranslation("commands.seasonalhorizons.season.locked"));
                 return;
             }
 
             if (Config.isRealTimeSeasons()) {
-                sender.addChatMessage(
-                    new ChatComponentText("The season follows the real-world month (realTimeSeasons in the config)."));
+                sender.addChatMessage(new ChatComponentTranslation("commands.seasonalhorizons.season.realTime"));
                 return;
             }
 
@@ -80,9 +80,9 @@ public class SeasonCommand extends CommandBase {
     }
 
     private void sendHelp(ICommandSender sender) {
-        sender.addChatMessage(new ChatComponentText("Available subcommands:"));
-        sender.addChatMessage(new ChatComponentText(" get"));
-        sender.addChatMessage(new ChatComponentText(" set <season name>"));
+        sender.addChatMessage(new ChatComponentTranslation("commands.seasonalhorizons.season.subcommands"));
+        sender.addChatMessage(new ChatComponentTranslation("commands.seasonalhorizons.season.subcommand.get"));
+        sender.addChatMessage(new ChatComponentTranslation("commands.seasonalhorizons.season.subcommand.set"));
     }
 
     private void sendCurrentSeason(ICommandSender sender) {
@@ -93,20 +93,23 @@ public class SeasonCommand extends CommandBase {
         }
 
         if (seasonWorldData == null) {
-            sender.addChatMessage(new ChatComponentText("This dimension has no seasons."));
+            sender.addChatMessage(new ChatComponentTranslation("commands.seasonalhorizons.season.noSeasons"));
             return;
         }
 
         if (Config.getLockedSeason() != null) {
             sender.addChatMessage(
-                new ChatComponentText("Current season: " + seasonWorldData.season.getId() + ", locked"));
+                new ChatComponentTranslation(
+                    "commands.seasonalhorizons.season.current.locked",
+                    seasonWorldData.season.getId()));
             return;
         }
 
         if (Config.isRealTimeSeasons()) {
             sender.addChatMessage(
-                new ChatComponentText(
-                    "Current season: " + seasonWorldData.season.getId() + ", follows the real-world month"));
+                new ChatComponentTranslation(
+                    "commands.seasonalhorizons.season.current.realTime",
+                    seasonWorldData.season.getId()));
             return;
         }
 
@@ -114,7 +117,9 @@ public class SeasonCommand extends CommandBase {
         int ticksLeft = Math.max(0, Config.getSubseasonLength() - seasonWorldData.seasonTicks);
         String daysLeft = String.format(Locale.ROOT, "%.1f", ticksLeft / 24000.0);
         sender.addChatMessage(
-            new ChatComponentText(
-                "Current season: " + seasonWorldData.season.getId() + ", " + daysLeft + " days left"));
+            new ChatComponentTranslation(
+                "commands.seasonalhorizons.season.current",
+                seasonWorldData.season.getId(),
+                daysLeft));
     }
 }
